@@ -2,11 +2,17 @@
 
 import sys
 
+import vtk
+from vtkmodules.vtkCommonColor import vtkNamedColors
+from vtkmodules.vtkCommonDataModel import vtkPiecewiseFunction
 from vtkmodules.vtkFiltersSources import vtkConeSource
-from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkRenderer
+from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkRenderer, vtkColorTransferFunction, \
+    vtkVolumeProperty, vtkVolume
+from vtkmodules.vtkIOMINC import vtkMINCImageReader
 # load implementations for rendering and interaction factory classes
 import vtkmodules.vtkRenderingOpenGL2
 import vtkmodules.vtkInteractionStyle
+from vtkmodules.vtkRenderingVolume import vtkFixedPointVolumeRayCastMapper
 
 import QVTKRenderWindowInteractor as QVTK
 QVTKRenderWindowInteractor = QVTK.QVTKRenderWindowInteractor
@@ -38,19 +44,66 @@ class SampleWidget(QWidget):
         self.ren = vtkRenderer()
         self.renderWidget.GetRenderWindow().AddRenderer(self.ren)
 
-        self.cone = vtkConeSource()
-        self.cone.SetResolution(8)
+        self.reader = vtkMINCImageReader()
+        self.reader.SetFileName("../Data/subject04_crisp_v.mnc")
+        # print(Image.CanReadFile("../Data/subject04_crisp_v.mnc"))
+        # reader.RescaleRealValuesOn()
+        self.reader.Update()
 
-        self.coneMapper = vtkPolyDataMapper()
-        self.coneMapper.SetInputConnection(self.cone.GetOutputPort())
+        # image = vtk.vtkImageData()
+        # image = reader.GetOutput()
 
-        self.coneActor = vtkActor()
-        self.coneActor.SetMapper(self.coneMapper)
+        # Create transfer mapping scalar value to opacity.
+        self.opacityTransferFunction = vtkPiecewiseFunction()
+        self.opacityTransferFunction.AddPoint(20, 1.0)
+        self.opacityTransferFunction.AddPoint(255, 1.0)
 
-        self.ren.AddActor(self.coneActor)
+        # Create transfer mapping scalar value to color.
+        self.colorTransferFunction = vtkColorTransferFunction()
+        self.colorTransferFunction.AddRGBPoint(0.0, 0.0, 0.0, 1.0)
+        self.colorTransferFunction.AddRGBPoint(64.0, 1.0, 0.0, 1.0)
+        self.colorTransferFunction.AddRGBPoint(128.0, 0.0, 0.0, 1.0)
+        self.colorTransferFunction.AddRGBPoint(192.0, 0.0, 1.0, 1.0)
+        self.colorTransferFunction.AddRGBPoint(255.0, 0.0, 0.2, 1.0)
 
-        # show the widget
-        #window.show()
+        # The property describes how the data will look.
+        self.volumeProperty = vtkVolumeProperty()
+        self.volumeProperty.SetColor(self.colorTransferFunction)
+        self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
+        self.volumeProperty.ShadeOn()
+        self.volumeProperty.SetInterpolationTypeToLinear()
+
+        # The mapper / ray cast function know how to render the data.
+        self.volumeMapper = vtkFixedPointVolumeRayCastMapper()
+        self.volumeMapper.SetInputConnection(self.reader.GetOutputPort())
+
+        # The volume holds the mapper and the property and
+        # can be used to position/orient the volume.
+        self.volume = vtkVolume()
+        self.volume.SetMapper(self.volumeMapper)
+        self.volume.SetProperty(self.volumeProperty)
+
+        self.ren.AddVolume(self.volume)
+        self.ren.SetBackground(vtkNamedColors().GetColor3d('Wheat'))
+        self.ren.GetActiveCamera().Azimuth(45)
+        self.ren.GetActiveCamera().Elevation(30)
+        self.ren.ResetCameraClippingRange()
+        self.ren.ResetCamera()
+
+        # renWin.SetSize(600, 600)
+        # renWin.SetWindowName('SimpleRayCast')
+        # renWin.Render()
+
+        # self.cone = vtkConeSource()
+        # self.cone.SetResolution(8)
+
+        # self.coneMapper = vtkPolyDataMapper()
+        # self.coneMapper.SetInputConnection(self.cone.GetOutputPort())
+
+        # self.coneActor = vtkActor()
+        # self.coneActor.SetMapper(self.coneMapper)
+
+        # self.ren.AddActor(self.coneActor)
 
         self.renderWidget.Initialize()
         self.renderWidget.Start()
