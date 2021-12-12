@@ -3,8 +3,9 @@
 import sys
 
 import vtk
+from vtkmodules.util.numpy_support import vtk_to_numpy
 from vtkmodules.vtkCommonColor import vtkNamedColors
-from vtkmodules.vtkCommonDataModel import vtkPiecewiseFunction
+from vtkmodules.vtkCommonDataModel import vtkPiecewiseFunction, vtkImageData
 from vtkmodules.vtkFiltersSources import vtkConeSource
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkRenderer, vtkColorTransferFunction, \
     vtkVolumeProperty, vtkVolume
@@ -46,12 +47,11 @@ class SampleWidget(QWidget):
 
         self.reader = vtkMINCImageReader()
         self.reader.SetFileName("../Data/subject04_crisp_v.mnc")
-        # print(Image.CanReadFile("../Data/subject04_crisp_v.mnc"))
-        # reader.RescaleRealValuesOn()
+        image = self.reader.GetOutputDataObject(0)  # type: vtkImageData
         self.reader.Update()
-
-        # image = vtk.vtkImageData()
-        # image = reader.GetOutput()
+        ext = image.GetExtent()
+        dim = (ext[1] - ext[0]+1, ext[3] - ext[2]+1, ext[5] - ext[4]+1)
+        data = vtk_to_numpy(image.GetPointData().GetScalars()).reshape(dim)
 
         # Create transfer mapping scalar value to opacity.
         self.opacityTransferFunction = vtkPiecewiseFunction()
@@ -89,21 +89,6 @@ class SampleWidget(QWidget):
         self.ren.GetActiveCamera().Elevation(30)
         self.ren.ResetCameraClippingRange()
         self.ren.ResetCamera()
-
-        # renWin.SetSize(600, 600)
-        # renWin.SetWindowName('SimpleRayCast')
-        # renWin.Render()
-
-        # self.cone = vtkConeSource()
-        # self.cone.SetResolution(8)
-
-        # self.coneMapper = vtkPolyDataMapper()
-        # self.coneMapper.SetInputConnection(self.cone.GetOutputPort())
-
-        # self.coneActor = vtkActor()
-        # self.coneActor.SetMapper(self.coneMapper)
-
-        # self.ren.AddActor(self.coneActor)
 
         self.renderWidget.Initialize()
         self.renderWidget.Start()
