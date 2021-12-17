@@ -9,7 +9,7 @@ from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkRenderer
 # load implementations for rendering and interaction factory classes
 import vtkmodules.vtkRenderingOpenGL2
 import vtkmodules.vtkInteractionStyle
-from vtkmodules.vtkRenderingVolume import vtkFixedPointVolumeRayCastMapper
+from vtkmodules.vtkRenderingVolume import vtkGPUVolumeRayCastMapper
 
 from QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 
@@ -60,7 +60,7 @@ class MainWidget(QWidget):
         self.volumeProperty.SetInterpolationTypeToLinear()
 
         # The mapper / ray cast function know how to render the data.
-        self.volumeMapper = vtkFixedPointVolumeRayCastMapper()
+        self.volumeMapper = vtkGPUVolumeRayCastMapper()
         self.volumeMapper.SetInputData(image)
 
         # The volume holds the mapper and the property and
