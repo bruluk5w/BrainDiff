@@ -1,16 +1,11 @@
-import sys
-
-from os import listdir
-from os.path import isfile, join
-
-import numpy
 import vtk
-from vtkmodules.util.numpy_support import vtk_to_numpy, numpy_to_vtk
+import numpy as np
+from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonColor import vtkNamedColors
+from vtkmodules.vtkCommonCore import vtkFloatArray
 from vtkmodules.vtkCommonDataModel import vtkPiecewiseFunction, vtkImageData
 from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper, vtkRenderer, vtkColorTransferFunction, \
     vtkVolumeProperty, vtkVolume
-from vtkmodules.vtkIOMINC import vtkMINCImageReader
 # load implementations for rendering and interaction factory classes
 import vtkmodules.vtkRenderingOpenGL2
 import vtkmodules.vtkInteractionStyle
@@ -28,25 +23,9 @@ class MainWidget(QWidget):
         # behavior and uses more memory but detaches the two array such that the numpy array can be released.
         return numpy_to_vtk(numpyArray.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
 
-    def loadDataAsNumpy(self):
-        dataPath = "../Data/"
-        dataFiles = [f for f in listdir(dataPath) if isfile(join(dataPath, f))]
-
-        npDataList = []
-        self.reader = vtkMINCImageReader()
-
-        for file in dataFiles:
-            self.reader.SetFileName(dataPath+file)
-            image = self.reader.GetOutputDataObject(0)  # type: vtkImageData
-            self.reader.Update()
-            ext = image.GetExtent()
-            dim = (ext[1] - ext[0] + 1, ext[3] - ext[2] + 1, ext[5] - ext[4] + 1)
-            npDataList.append(vtk_to_numpy(image.GetPointData().GetScalars()).reshape(dim))
-
-        return npDataList
-
-    def __init__(self, app):
+    def __init__(self, app, image: vtkImageData):
         super().__init__()
+        self.image = image
         self.vertical_layout = QVBoxLayout(self)
         self.button = QPushButton(text="Push Me", )
         self.button.clicked.connect(lambda: print("hello world"))
@@ -59,9 +38,6 @@ class MainWidget(QWidget):
 
         self.ren = vtkRenderer()
         self.renderWidget.GetRenderWindow().AddRenderer(self.ren)
-
-        numpyDataList = self.loadDataAsNumpy()
-        image = self.numpyToVTK(numpyDataList[0])  # type: vtkImageData
 
         # Create transfer mapping scalar value to opacity.
         self.opacityTransferFunction = vtkPiecewiseFunction()
@@ -85,7 +61,7 @@ class MainWidget(QWidget):
 
         # The mapper / ray cast function know how to render the data.
         self.volumeMapper = vtkFixedPointVolumeRayCastMapper()
-        self.volumeMapper.SetInputConnection(self.reader.GetOutputPort())
+        self.volumeMapper.SetInputData(image)
 
         # The volume holds the mapper and the property and
         # can be used to position/orient the volume.
@@ -102,3 +78,7 @@ class MainWidget(QWidget):
 
         self.renderWidget.Initialize()
         self.renderWidget.Start()
+
+    def set_volume(self, volume: np.ndarray):
+        volume_data = self.numpyToVTK(volume)  # type: vtkFloatArray
+        self.image.GetPointData().SetScalars(volume_data)
