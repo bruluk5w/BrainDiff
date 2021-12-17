@@ -39,7 +39,7 @@ def start_app():
     image = __data_loader.image
     __data_loader = None
     app_widget = MainWidget(__app, image)
-    app_widget.set_volume(data[0])
+    # app_widget.set_volume(data[0])
     __window.setCentralWidget(app_widget)
 
 
