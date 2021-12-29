@@ -1,46 +1,46 @@
 from typing import Optional
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QProgressBar
-from PySide6.QtCore import SIGNAL
+from PySide6.QtCore import QPoint
+from PySide6.QtWidgets import QApplication, QMainWindow
+
+from LoadingWidget import LoadingWidget
 from MainWidget import MainWidget
-from DataLoader import DataLoader
 
 __window: Optional[QMainWindow] = None
 __app: Optional[QApplication] = None
-__data_loader: Optional[QApplication] = None
 
 
 def main():
-    global __window, __app, __data_loader
+    global __window, __app
     # every QT app needs an app
     __app = QApplication(['QVTKRenderWindowInteractor'])
-    __window = QMainWindow()
-    progress_bar = QProgressBar()
-    progress_bar.setMinimum(0)
-    __window.setCentralWidget(progress_bar)
+    __app.setApplicationDisplayName('BrainDiff')
+    __app.setApplicationName('BrainDiff')
 
-    __data_loader = DataLoader()
-    progress_bar.setMaximum(len(__data_loader))
-    __data_loader.progress.connect(lambda p: progress_bar.setValue(p))
-    __data_loader.done.connect(start_app)
-    __data_loader.start()
+    __window = QMainWindow()
+
+    loading_widget = LoadingWidget(lambda: start_app(loading_widget.result))
+
+    __window.setCentralWidget(loading_widget)
     __window.show()
     __app.exec()
 
 
-def start_app():
-    global __window, __app,  __data_loader
-    if len(__data_loader) == 0:
+def start_app(result):
+    global __window, __app
+    if result is None:
         print("No data found. Exiting.")
         __app.quit()
         return
 
-    data = __data_loader.data
-    image = __data_loader.image
-    __data_loader = None
-    app_widget = MainWidget(__app, image)
+    data, image = result
+    app_widget = MainWidget(__app, image, data)
     # app_widget.set_volume(data[0])
     __window.setCentralWidget(app_widget)
+    screen_size = __app.primaryScreen().availableGeometry().size()
+    __window.resize(screen_size * 0.7)
+    pos = screen_size * 0.15
+    __window.move(pos.width(), pos.height())
 
 
 if __name__ == "__main__":

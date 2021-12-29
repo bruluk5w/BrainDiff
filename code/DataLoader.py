@@ -29,10 +29,6 @@ class DataLoader(QThread):
     def image(self) -> vtkImageData:
         return self.__image
 
-    def __del__(self):
-        self.exiting = True
-        self.wait()
-
     def run(self):
         reader = vtkMINCImageReader()
 

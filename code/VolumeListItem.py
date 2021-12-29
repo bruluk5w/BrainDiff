@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QCheckBox
+from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QCheckBox, QSizePolicy
 
 
 class VolumeListItem(QWidget):
@@ -11,6 +11,8 @@ class VolumeListItem(QWidget):
         self.__horizontal_layout.addWidget(self.__check_box)
         self.__horizontal_layout.addWidget(self.__label)
         self.setLayout(self.__horizontal_layout)
+        self.__selected = True
+        self.sizePolicy().setHorizontalPolicy(QSizePolicy.Minimum)
 
     @property
     def idx(self):
@@ -18,3 +20,12 @@ class VolumeListItem(QWidget):
 
     def set_text(self, text: str):
         self.__label.setText(text)
+
+    @property
+    def selected(self):
+        return self.__selected
+
+    @selected.setter
+    def selected(self, value: bool):
+        self.__selected = value
+        self.__check_box.setChecked(value)
