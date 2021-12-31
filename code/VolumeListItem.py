@@ -11,7 +11,7 @@ class VolumeListItem(QWidget):
         self.__horizontal_layout.addWidget(self.__check_box)
         self.__horizontal_layout.addWidget(self.__label)
         self.setLayout(self.__horizontal_layout)
-        self.__selected = True
+        self.__selected = False
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Minimum)
 
     @property

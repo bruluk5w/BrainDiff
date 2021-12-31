@@ -9,7 +9,7 @@ from VolumeListItem import VolumeListItem
 class VolumeListWidget(QListWidget):
     def __init__(self, volume_list: List[np.ndarray], parent=None,
                  selection_added_cb: Callable[[int, np.ndarray], None] = None,
-                 selection_removed_cb: Callable[[int, np.ndarray], None] = None):
+                 selection_removed_cb: Callable[[int], None] = None):
         super().__init__(parent)
         self.__volume_list = volume_list
         self.__selection_added_cb = selection_added_cb
@@ -43,4 +43,4 @@ class VolumeListWidget(QListWidget):
             volume_list_item = self.itemWidget(self.item(idx))
             volume_list_item.selected = False
             if self.__selection_removed_cb is not None:
-                self.__selection_removed_cb(idx, self[idx])
+                self.__selection_removed_cb(idx)
