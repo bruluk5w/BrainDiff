@@ -1,6 +1,7 @@
 import numpy as np
 import vtk
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy, QLabel
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonColor import vtkNamedColors
 from vtkmodules.vtkCommonDataModel import vtkImageData, vtkPiecewiseFunction
@@ -19,7 +20,7 @@ def convert(numpy_array):
 class SynchronizedRenderWidget(QWidget):
     camera = vtkCamera()
 
-    def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray):
+    def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray, volume_idx: int):
         super().__init__()
         self.__is_gpu = is_gpu
         self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
@@ -30,6 +31,13 @@ class SynchronizedRenderWidget(QWidget):
         self.vertical_layout.setSpacing(0)
         self.vertical_layout.setContentsMargins(0, 0, 0, 0)
         self.vertical_layout.addWidget(self.__dummy_widget)
+
+        # Volume Number Identifier
+        self.__label = QLabel()
+        self.__label.setText("Volume "+str(volume_idx))
+        self.__label.setAlignment(Qt.AlignCenter)
+        self.vertical_layout.addWidget(self.__label)
+
 
         self.ren = vtkRenderer()
         self.ren.SetActiveCamera(self.camera)

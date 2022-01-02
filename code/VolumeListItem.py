@@ -8,11 +8,16 @@ class VolumeListItem(QWidget):
         self.__horizontal_layout = QHBoxLayout()
         self.__label = QLabel()
         self.__check_box = QCheckBox()
+        self.__check_box.stateChanged.connect(lambda: self.clickCheckbox())
         self.__horizontal_layout.addWidget(self.__check_box)
         self.__horizontal_layout.addWidget(self.__label)
         self.setLayout(self.__horizontal_layout)
         self.__selected = False
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Minimum)
+
+    def clickCheckbox(self):
+        # TODO: Doesn't work for some reason
+        self.__selected = not self.__selected
 
     @property
     def idx(self):

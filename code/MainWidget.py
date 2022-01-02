@@ -41,7 +41,7 @@ class MainWidget(QWidget):
         else:
             image = vtkImageData()
             image.CopyStructure(self.__template_image)
-            render_widget = SynchronizedRenderWidget(is_gpu, image, volume)
+            render_widget = SynchronizedRenderWidget(is_gpu, image, volume, idx)
             render_widget.active = True
             self.__render_widgets[idx] = render_widget
 
