@@ -52,4 +52,6 @@ class MainWindow(QMainWindow):
             self.__main_widget.gpu_mem_limit_changed(limit)
 
     def closeEvent(self, event):
+        super().closeEvent(event)
+        self.__main_widget.close()
         Popup.close_all()

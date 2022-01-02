@@ -16,6 +16,7 @@ class Popup(QWidget):
         Popup.popups.append(self)
 
     def closeEvent(self, event):
+        super().closeEvent(event)
         Popup.popups.remove(self)
         if self.__cb is not None:
             self.__cb()

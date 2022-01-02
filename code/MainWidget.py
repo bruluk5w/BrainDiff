@@ -1,10 +1,10 @@
-from typing import List, Dict, Tuple, NamedTuple
+from typing import List, Dict
 
 import numpy as np
 from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout
 from vtkmodules.vtkCommonDataModel import vtkImageData
 
-from RenderWidget import RenderWidget
+from RenderWidget import SynchronizedRenderWidget
 from VolumeListWidget import VolumeListWidget
 
 
@@ -14,7 +14,7 @@ class MainWidget(QWidget):
         super().__init__()
         self.__gpu_mem_limit = gpu_mem_limit
         self.__template_image = image
-        self.__render_widgets: Dict[int, RenderWidget] = {}
+        self.__render_widgets: Dict[int, SynchronizedRenderWidget] = {}
         self.__volume_list_widget = VolumeListWidget(volume_list,
                                                      selection_added_cb=self.add_volume,
                                                      selection_removed_cb=self.remove_volume)
@@ -23,13 +23,9 @@ class MainWidget(QWidget):
         self.__splitter = QSplitter()
         self.__splitter.setChildrenCollapsible(False)
         self.__splitter.addWidget(self.__volume_list_widget)
-        self.__wrapper = QWidget()
-        self.__grid_layout = QGridLayout(self)
-        self.__wrapper.setLayout(self.__grid_layout)
-        self.__splitter.addWidget(self.__wrapper)
+        self.__grid_container = QWidget()
+        self.__splitter.addWidget(self.__grid_container)
         self.__vertical_layout.addWidget(self.__splitter)
-        # if you don't want the 'q' key to exit comment this.
-        # self.renderWidget.AddObserver("ExitEvent", lambda o, e, a=app: a.quit())
 
         self.__volume_list_widget.item(0).setSelected(True)
 
@@ -42,23 +38,40 @@ class MainWidget(QWidget):
             if not renderer.active:
                 renderer.is_gpu = is_gpu
                 renderer.active = True
-                self.__grid_layout.addWidget(renderer)
         else:
             image = vtkImageData()
             image.CopyStructure(self.__template_image)
-            render_widget = RenderWidget(is_gpu, image, volume)
+            render_widget = SynchronizedRenderWidget(is_gpu, image, volume)
             render_widget.active = True
             self.__render_widgets[idx] = render_widget
-            self.__grid_layout.addWidget(render_widget)
+
+        self.layout()
 
     def remove_volume(self, idx: int):
         print('Volume {} removed.'.format(idx))
         if idx in self.__render_widgets:
             renderer = self.__render_widgets[idx]
-            self.__grid_layout.removeWidget(renderer)
             renderer.active = False
         else:
             print('Error: no volume {} that could be removed.'.format(idx))
+
+        self.layout()
+
+    def layout(self):
+        for renderer in self.__render_widgets.values():
+            renderer.setParent(None)
+
+        # reparent layout and child widgets to temporary which will be deleted the proper way
+        QWidget().setLayout(self.__grid_container.layout())
+
+        layout = QGridLayout()
+        layout.setSpacing(0)
+        self.__grid_container.setLayout(layout)
+        num_widgets = sum(1 for r in self.__render_widgets.values() if r.active)
+        layout_side_size = _next_square(num_widgets)
+        for i, renderer in enumerate(t for t in self.__render_widgets.values() if t.active):
+            row = i // layout_side_size
+            layout.addWidget(renderer, row, i - layout_side_size * row)
 
     def gpu_mem_limit_changed(self, limit: int):
         print('GPU memory limit changed to {} MB'.format(limit))
@@ -67,3 +80,16 @@ class MainWidget(QWidget):
         for render_widget in self.__render_widgets.values():
             used_mem += render_widget.mem_size
             render_widget.is_gpu = used_mem < limit
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        for renderer in self.__render_widgets.values():
+            renderer.close()
+
+
+def _next_square(n: int):
+    i = 0
+    while i * i < n:
+        i += 1
+
+    return i
