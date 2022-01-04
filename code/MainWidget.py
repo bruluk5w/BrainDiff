@@ -1,12 +1,15 @@
 from typing import List, Dict
 
 import numpy as np
-from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout, QPushButton
 from vtkmodules.vtkCommonColor import vtkNamedColors
 from vtkmodules.vtkCommonDataModel import vtkImageData
 
 from RenderWidget import SynchronizedRenderWidget
 from VolumeListWidget import VolumeListWidget
+
+
+
 
 
 class MainWidget(QWidget):
@@ -34,12 +37,22 @@ class MainWidget(QWidget):
                                                      selection_removed_cb=self.remove_volume)
         self.__vertical_layout = QVBoxLayout(self)
 
-        self.__splitter = QSplitter()
-        self.__splitter.setChildrenCollapsible(False)
-        self.__splitter.addWidget(self.__volume_list_widget)
+        self.__list_splitter = QSplitter()
+        self.__list_splitter.setChildrenCollapsible(False)
+        self.__list_splitter.addWidget(self.__volume_list_widget)
+        self.__region_selection = QWidget(self)
+        self.__region_selection_layout = QVBoxLayout(self.__region_selection)
+        self.__dummybutton = QPushButton("Adjust Regions")
+        self.__dummybutton.clicked.connect(lambda: self.add_shown_regions())
+        self.__region_selection_layout.addWidget(self.__dummybutton)
+        self.__list_splitter.addWidget(self.__region_selection)
+
+        self.__main_splitter = QSplitter()
+        self.__main_splitter.setChildrenCollapsible(False)
+        self.__main_splitter.addWidget(self.__list_splitter)
         self.__grid_container = QWidget()
-        self.__splitter.addWidget(self.__grid_container)
-        self.__vertical_layout.addWidget(self.__splitter)
+        self.__main_splitter.addWidget(self.__grid_container)
+        self.__vertical_layout.addWidget(self.__main_splitter)
 
         self.__volume_list_widget.item(0).setSelected(True)
 
@@ -70,6 +83,12 @@ class MainWidget(QWidget):
             print('Error: no volume {} that could be removed.'.format(idx))
 
         self.layout()
+
+    def add_shown_regions(self):
+        self.__active_regions = [5, 9]
+        for i, renderer in enumerate(t for t in self.__render_widgets.values()):
+            renderer.update_shown_regions(self.__active_regions)
+
 
     def layout(self):
         for renderer in self.__render_widgets.values():
