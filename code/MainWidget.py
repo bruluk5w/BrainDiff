@@ -2,6 +2,7 @@ from typing import List, Dict
 
 import numpy as np
 from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout
+from vtkmodules.vtkCommonColor import vtkNamedColors
 from vtkmodules.vtkCommonDataModel import vtkImageData
 
 from RenderWidget import SynchronizedRenderWidget
@@ -12,6 +13,19 @@ class MainWidget(QWidget):
 
     def __init__(self, image: vtkImageData, volume_list: List[np.ndarray], gpu_mem_limit: int):
         super().__init__()
+        self.__color_list = [vtkNamedColors().GetColor3d("Black"),  # 0 Volume Border
+                             vtkNamedColors().GetColor3d("Banana"),  # 1 Cerebrospinal Fluid
+                             vtkNamedColors().GetColor3d("Gray"),  # 2 Gray Matter
+                             vtkNamedColors().GetColor3d("White"),  # 3 White Matter
+                             vtkNamedColors().GetColor3d("Raspberry"),  # 4 Fat
+                             vtkNamedColors().GetColor3d("Tomato"),  # 5 Muscle
+                             vtkNamedColors().GetColor3d("Flesh"),  # 6 Muscle/Skin
+                             vtkNamedColors().GetColor3d("Wheat"),  # 7 Skull
+                             vtkNamedColors().GetColor3d("Blue"),  # 8 Vessels
+                             vtkNamedColors().GetColor3d("Mint"),  # 9 Around Fat
+                             vtkNamedColors().GetColor3d("Peacock"),  # 10 Dura Matter
+                             vtkNamedColors().GetColor3d("Salmon")]  # 11 Bone Marrow
+        self.__active_regions = [4, 10]
         self.__gpu_mem_limit = gpu_mem_limit
         self.__template_image = image
         self.__render_widgets: Dict[int, SynchronizedRenderWidget] = {}
@@ -41,7 +55,7 @@ class MainWidget(QWidget):
         else:
             image = vtkImageData()
             image.CopyStructure(self.__template_image)
-            render_widget = SynchronizedRenderWidget(is_gpu, image, volume, idx)
+            render_widget = SynchronizedRenderWidget(is_gpu, image, volume, idx, self.__color_list, self.__active_regions)
             render_widget.active = True
             self.__render_widgets[idx] = render_widget
 

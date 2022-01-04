@@ -16,7 +16,7 @@ class VolumeListItem(QWidget):
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Minimum)
 
     def clickCheckbox(self):
-        # TODO: Doesn't work for some reason
+        # TODO: This would work if it was set in VolumeListWidget
         self.__selected = not self.__selected
 
     @property

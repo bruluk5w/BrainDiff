@@ -20,13 +20,15 @@ def convert(numpy_array):
 class SynchronizedRenderWidget(QWidget):
     camera = vtkCamera()
 
-    def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray, volume_idx: int):
+    def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray, volume_idx: int, color_list, active_regions):
         super().__init__()
+
         self.__is_gpu = is_gpu
         self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
         self.__dummy_widget = QWidget()
         self.image = image
         self.set_volume(volume)
+
         self.vertical_layout = QVBoxLayout(self)
         self.vertical_layout.setSpacing(0)
         self.vertical_layout.setContentsMargins(0, 0, 0, 0)
@@ -41,23 +43,17 @@ class SynchronizedRenderWidget(QWidget):
 
         self.ren = vtkRenderer()
         self.ren.SetActiveCamera(self.camera)
-        # Create transfer mapping scalar value to opacity.
-        self.opacityTransferFunction = vtkPiecewiseFunction()
-        self.opacityTransferFunction.AddPoint(20, 1.0)
-        self.opacityTransferFunction.AddPoint(255, 1.0)
 
-        # Create transfer mapping scalar value to color.
+        # Create transfer mapping scalar value to color according to color list and iso 0-11
         self.colorTransferFunction = vtkColorTransferFunction()
-        self.colorTransferFunction.AddRGBPoint(0.0, 0.0, 0.0, 1.0)
-        self.colorTransferFunction.AddRGBPoint(64.0, 1.0, 0.0, 1.0)
-        self.colorTransferFunction.AddRGBPoint(128.0, 0.0, 0.0, 1.0)
-        self.colorTransferFunction.AddRGBPoint(192.0, 0.0, 1.0, 1.0)
-        self.colorTransferFunction.AddRGBPoint(255.0, 0.0, 0.2, 1.0)
+        for i in range(12):
+            self.colorTransferFunction.AddRGBPoint(i, color_list[i][0], color_list[i][1], color_list[i][2])
 
         # The property describes how the data will look.
         self.volumeProperty = vtkVolumeProperty()
         self.volumeProperty.SetColor(self.colorTransferFunction)
-        self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
+        self.opacityTransferFunction = None
+        self.update_shown_regions(active_regions)
         self.volumeProperty.ShadeOn()
         self.volumeProperty.SetInterpolationTypeToLinear()
 
@@ -72,7 +68,7 @@ class SynchronizedRenderWidget(QWidget):
         self.active = True
 
         self.ren.AddVolume(self.volume)
-        self.ren.SetBackground(vtkNamedColors().GetColor3d('Wheat'))
+        self.ren.SetBackground(vtkNamedColors().GetColor3d('Black'))
         self.ren.GetActiveCamera().Azimuth(45)
         self.ren.GetActiveCamera().Elevation(30)
         self.ren.ResetCameraClippingRange()
@@ -110,6 +106,18 @@ class SynchronizedRenderWidget(QWidget):
         else:
             self.volumeMapper.SetRequestedRenderModeToRayCast()
             self.volumeMapper.ReleaseGraphicsResources(self.renderWindowWidget.GetRenderWindow())
+
+    def update_shown_regions(self, active_regions):
+        # Create transfer mapping scalar value to opacity.
+        self.opacityTransferFunction = vtkPiecewiseFunction()
+        # Make all regions invisible
+        for i in range(11):
+            self.opacityTransferFunction.AddPoint(i + 0.1, 0.0)
+        # Add points of visibility for active regions
+        for idx in active_regions:
+            # TODO: The user could also adjust the opacity in the interface and it could be set here
+            self.opacityTransferFunction.AddPoint(idx, 1.0)
+        self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
 
     def __init(self):
         assert not self.__active
