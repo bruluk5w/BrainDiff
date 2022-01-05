@@ -7,9 +7,7 @@ from vtkmodules.vtkCommonDataModel import vtkImageData
 
 from RenderWidget import SynchronizedRenderWidget
 from VolumeListWidget import VolumeListWidget
-
-
-
+from settings.EditableIntervalSlider import EditableIntervalSlider
 
 
 class MainWidget(QWidget):
@@ -28,7 +26,9 @@ class MainWidget(QWidget):
                              vtkNamedColors().GetColor3d("Mint"),  # 9 Around Fat
                              vtkNamedColors().GetColor3d("Peacock"),  # 10 Dura Matter
                              vtkNamedColors().GetColor3d("Salmon")]  # 11 Bone Marrow
-        self.__active_regions = [4, 10]
+        self.__iso_opacities = []
+        for i in range(12):
+            self.__iso_opacities.append(float(0))
         self.__gpu_mem_limit = gpu_mem_limit
         self.__template_image = image
         self.__render_widgets: Dict[int, SynchronizedRenderWidget] = {}
@@ -42,10 +42,29 @@ class MainWidget(QWidget):
         self.__list_splitter.addWidget(self.__volume_list_widget)
         self.__region_selection = QWidget(self)
         self.__region_selection_layout = QVBoxLayout(self.__region_selection)
-        self.__dummybutton = QPushButton("Adjust Regions")
-        self.__dummybutton.clicked.connect(lambda: self.add_shown_regions())
-        self.__region_selection_layout.addWidget(self.__dummybutton)
+
+        self.__sliders = []
+        for i in range(12):
+            self.__sliders.append(EditableIntervalSlider(minimum=0, maximum=100))
+            self.__region_selection_layout.addWidget(self.__sliders[i])
+            self.__sliders[i].set_value(0)
+
+        # Apparently this can't be done in the loop?
+        self.__sliders[0].value_changed.connect(lambda: self.adjust_iso_opacities(0, self.__sliders[0].get_value()))
+        self.__sliders[1].value_changed.connect(lambda: self.adjust_iso_opacities(1, self.__sliders[1].get_value()))
+        self.__sliders[2].value_changed.connect(lambda: self.adjust_iso_opacities(2, self.__sliders[2].get_value()))
+        self.__sliders[3].value_changed.connect(lambda: self.adjust_iso_opacities(3, self.__sliders[3].get_value()))
+        self.__sliders[4].value_changed.connect(lambda: self.adjust_iso_opacities(4, self.__sliders[4].get_value()))
+        self.__sliders[5].value_changed.connect(lambda: self.adjust_iso_opacities(5, self.__sliders[5].get_value()))
+        self.__sliders[6].value_changed.connect(lambda: self.adjust_iso_opacities(6, self.__sliders[6].get_value()))
+        self.__sliders[7].value_changed.connect(lambda: self.adjust_iso_opacities(7, self.__sliders[7].get_value()))
+        self.__sliders[8].value_changed.connect(lambda: self.adjust_iso_opacities(8, self.__sliders[8].get_value()))
+        self.__sliders[9].value_changed.connect(lambda: self.adjust_iso_opacities(9, self.__sliders[9].get_value()))
+        self.__sliders[10].value_changed.connect(lambda: self.adjust_iso_opacities(10, self.__sliders[10].get_value()))
+        self.__sliders[11].value_changed.connect(lambda: self.adjust_iso_opacities(11, self.__sliders[11].get_value()))
+
         self.__list_splitter.addWidget(self.__region_selection)
+
 
         self.__main_splitter = QSplitter()
         self.__main_splitter.setChildrenCollapsible(False)
@@ -68,7 +87,8 @@ class MainWidget(QWidget):
         else:
             image = vtkImageData()
             image.CopyStructure(self.__template_image)
-            render_widget = SynchronizedRenderWidget(is_gpu, image, volume, idx, self.__color_list, self.__active_regions)
+            render_widget = SynchronizedRenderWidget(is_gpu, image, volume, idx, self.__color_list,
+                                                     self.__iso_opacities)
             render_widget.active = True
             self.__render_widgets[idx] = render_widget
 
@@ -84,11 +104,11 @@ class MainWidget(QWidget):
 
         self.layout()
 
-    def add_shown_regions(self):
-        self.__active_regions = [5, 9]
+    def adjust_iso_opacities(self, iso: int, v: float):
+        self.__iso_opacities[iso] = (v/100)
+        print(self.__iso_opacities)
         for i, renderer in enumerate(t for t in self.__render_widgets.values()):
-            renderer.update_shown_regions(self.__active_regions)
-
+            renderer.update_iso_opacities(self.__iso_opacities)
 
     def layout(self):
         for renderer in self.__render_widgets.values():

@@ -1,5 +1,8 @@
+from typing import List
+
 import numpy as np
 import vtk
+import vtkmodules
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy, QLabel
 from vtkmodules.util.numpy_support import numpy_to_vtk
@@ -20,7 +23,8 @@ def convert(numpy_array):
 class SynchronizedRenderWidget(QWidget):
     camera = vtkCamera()
 
-    def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray, volume_idx: int, color_list, active_regions):
+    def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray,
+                 volume_idx: int, color_list: List[vtkmodules.vtkCommonDataModel.vtkColor3d], iso_opacities: List[float]):
         super().__init__()
 
         self.__is_gpu = is_gpu
@@ -53,7 +57,7 @@ class SynchronizedRenderWidget(QWidget):
         self.volumeProperty = vtkVolumeProperty()
         self.volumeProperty.SetColor(self.colorTransferFunction)
         self.opacityTransferFunction = None
-        self.update_shown_regions(active_regions)
+        self.update_iso_opacities(iso_opacities)
         self.volumeProperty.ShadeOn()
         self.volumeProperty.SetInterpolationTypeToLinear()
 
@@ -107,16 +111,10 @@ class SynchronizedRenderWidget(QWidget):
             self.volumeMapper.SetRequestedRenderModeToRayCast()
             self.volumeMapper.ReleaseGraphicsResources(self.renderWindowWidget.GetRenderWindow())
 
-    def update_shown_regions(self, active_regions):
-        # Create transfer mapping scalar value to opacity.
+    def update_iso_opacities(self, iso_opacities: List[float]):
         self.opacityTransferFunction = vtkPiecewiseFunction()
-        # Make all regions invisible
-        for i in range(11):
-            self.opacityTransferFunction.AddPoint(i + 0.1, 0.0)
-        # Add points of visibility for active regions
-        for idx in active_regions:
-            # TODO: The user could also adjust the opacity in the interface and it could be set here
-            self.opacityTransferFunction.AddPoint(idx, 1.0)
+        for i in range(12):
+            self.opacityTransferFunction.AddPoint(i, iso_opacities[i])
         self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
 
     def __init(self):

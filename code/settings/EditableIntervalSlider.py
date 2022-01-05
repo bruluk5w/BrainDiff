@@ -40,6 +40,9 @@ class EditableIntervalSlider(QWidget):
     def value_changed(self):
         return self.__slider.valueChanged
 
+    def get_value(self):
+        return self.__slider.value()
+
     def set_value(self, value):
         if value < self.__min_edit.value():
             self.__set_minimum(value, force=True)
