@@ -4,6 +4,7 @@ import numpy as np
 import vtk
 import vtkmodules
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy, QLabel
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonColor import vtkNamedColors
@@ -40,7 +41,7 @@ class SynchronizedRenderWidget(QWidget):
 
         # Volume Number Identifier
         self.__label = QLabel()
-        self.__label.setText("Volume "+str(volume_idx))
+        self.__label.setText("Volume "+str(volume_idx+1))
         self.__label.setAlignment(Qt.AlignCenter)
         self.vertical_layout.addWidget(self.__label)
 

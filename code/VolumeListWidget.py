@@ -2,6 +2,7 @@ from typing import List, Callable
 from itertools import chain
 import numpy as np
 from PySide6.QtCore import QItemSelection, QItemSelectionRange
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QListWidgetItem, QListWidget, QAbstractItemView
 from VolumeListItem import VolumeListItem
 
@@ -17,7 +18,7 @@ class VolumeListWidget(QListWidget):
         self.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         for idx in range(len(volume_list)):
             custom_widget = VolumeListItem(idx, self)
-            custom_widget.set_text(str(idx))
+            custom_widget.set_text("Volume "+str(idx+1))
             item = QListWidgetItem(self)
             item.setSizeHint(custom_widget.sizeHint())
             self.addItem(item)
