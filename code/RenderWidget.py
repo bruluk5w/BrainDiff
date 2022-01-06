@@ -28,6 +28,7 @@ class SynchronizedRenderWidget(QWidget):
                  volume_idx: int, color_list: List[vtkmodules.vtkCommonDataModel.vtkColor3d], iso_opacities: List[float]):
         super().__init__()
 
+        self.__volume_idx = volume_idx
         self.__is_gpu = is_gpu
         self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
         self.__dummy_widget = QWidget()
@@ -38,12 +39,6 @@ class SynchronizedRenderWidget(QWidget):
         self.vertical_layout.setSpacing(0)
         self.vertical_layout.setContentsMargins(0, 0, 0, 0)
         self.vertical_layout.addWidget(self.__dummy_widget)
-
-        # Volume Number Identifier
-        self.__label = QLabel()
-        self.__label.setText("Volume "+str(volume_idx+1))
-        self.__label.setAlignment(Qt.AlignCenter)
-        self.vertical_layout.addWidget(self.__label)
 
 
         self.ren = vtkRenderer()
@@ -90,7 +85,7 @@ class SynchronizedRenderWidget(QWidget):
             if self.__active:
                 self.__release()
             else:
-                self.__init()
+                self.__init(self.__volume_idx)
 
             assert self.__active == value
 
@@ -118,10 +113,11 @@ class SynchronizedRenderWidget(QWidget):
             self.opacityTransferFunction.AddPoint(i, iso_opacities[i])
         self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
 
-    def __init(self):
+    def __init(self, volume_idx: int):
         assert not self.__active
 
         self.renderWindowWidget = SynchronizedQVTKRenderWindowInteractor()
+        self.renderWindowWidget.setToolTip("Volume "+str(volume_idx+1))
         self.renderWindowWidget.GetRenderWindow().AddRenderer(self.ren)
         self.volumeMapper.SetInputDataObject(0, self.image)
         self.volume.SetMapper(None)

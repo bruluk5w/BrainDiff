@@ -34,6 +34,7 @@ class MainWidget(QWidget):
         self.__gpu_mem_limit = gpu_mem_limit
         self.__template_image = image
         self.__render_widgets: Dict[int, SynchronizedRenderWidget] = {}
+        self.__show_volume_number = False
         self.__volume_list_widget = VolumeListWidget(volume_list,
                                                      selection_added_cb=self.add_volume,
                                                      selection_removed_cb=self.remove_volume)
