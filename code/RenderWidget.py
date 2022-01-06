@@ -84,8 +84,10 @@ class SynchronizedRenderWidget(QWidget):
         if self.__active != value:
             if self.__active:
                 self.__release()
+                self.hide()
             else:
                 self.__init(self.__volume_idx)
+                self.show()
 
             assert self.__active == value
 
@@ -105,7 +107,8 @@ class SynchronizedRenderWidget(QWidget):
             self.volumeMapper.SetRequestedRenderModeToGPU()
         else:
             self.volumeMapper.SetRequestedRenderModeToRayCast()
-            self.volumeMapper.ReleaseGraphicsResources(self.renderWindowWidget.GetRenderWindow())
+            if self.active:
+                self.volumeMapper.ReleaseGraphicsResources(self.renderWindowWidget.GetRenderWindow())
 
     def update_iso_opacities(self, iso_opacities: List[float]):
         self.opacityTransferFunction = vtkPiecewiseFunction()
@@ -155,4 +158,4 @@ class SynchronizedRenderWidget(QWidget):
     def closeEvent(self, evt):
         super().closeEvent(evt)
         if self.active:
-            self.renderWindowWidget.close()
+            self.active = False
