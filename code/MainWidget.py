@@ -57,6 +57,8 @@ class MainWidget(QWidget):
             iso_name = QLabel()
             iso_name.setText(" "+self.__iso_name_list[i])
             iso_name.setAutoFillBackground(True)
+
+            """
             palette.setColor(iso_name.backgroundRole(),
                              QColor(self.__color_list[i][0] * 255, self.__color_list[i][1] * 255, self.__color_list[i][2] * 255))
             # Make Text Black or White depending on if color is mostly bright or mostly dark
@@ -65,6 +67,7 @@ class MainWidget(QWidget):
             else:
                 palette.setColor(iso_name.foregroundRole(), "Ghost White")
             iso_name.setPalette(palette)
+            """
             self.__region_selection_layout.addWidget(iso_name)
 
             slider = QSlider(Qt.Horizontal)
@@ -72,7 +75,7 @@ class MainWidget(QWidget):
             slider.setMinimum(0)
             slider.setMaximum(100)
             slider.setAutoFillBackground(True)
-            palette.setColor(slider.foregroundRole(),
+            palette.setColor(slider.backgroundRole(),
                              QColor(self.__color_list[i][0] * 255, self.__color_list[i][1] * 255,
                                     self.__color_list[i][2] * 255))
 
