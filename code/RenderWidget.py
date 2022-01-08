@@ -24,6 +24,10 @@ def _make_opacity_value(x):
     return x / 255
 
 
+def _make_color_value(c: vtkColor3ub):
+    return [c[0] / 255, c[1] / 255, c[2] / 255]
+
+
 def init_color_transfer_function(func: vtkColorTransferFunction, values: List[vtkColor3ub]):
     func.AllowDuplicateScalarsOn()
     max_x = len(values)
@@ -143,7 +147,7 @@ class SynchronizedRenderWidget(QWidget):
             self.renderWindowWidget.on_change(None)
 
     def update_label_color(self, idx: int, label_color: vtkColor3ub):
-        val = [label_color[0], label_color[1], label_color[2]]
+        val = _make_color_value(label_color)
         node = [0.0] * 6
         self.colorTransferFunction.GetNodeValue(idx * 2, node)
         node[1:4] = val
