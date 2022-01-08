@@ -2,17 +2,16 @@ from typing import List
 
 import numpy as np
 import vtk
-import vtkmodules
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy, QLabel
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonColor import vtkNamedColors
-from vtkmodules.vtkCommonDataModel import vtkImageData, vtkPiecewiseFunction
+from vtkmodules.vtkCommonDataModel import vtkImageData, vtkPiecewiseFunction, vtkColor3ub
 from vtkmodules.vtkRenderingCore import vtkRenderer, vtkColorTransferFunction, vtkVolumeProperty, vtkVolume, vtkCamera
 from vtkmodules.vtkRenderingVolumeOpenGL2 import vtkSmartVolumeMapper
 
 from SynchronizedQVTKRenderWindowInteractor import SynchronizedQVTKRenderWindowInteractor
+from common import clamp
 
 
 def convert(numpy_array):
@@ -21,11 +20,33 @@ def convert(numpy_array):
     return numpy_to_vtk(numpy_array.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
 
 
+def _make_opacity_value(x):
+    return x / 255
+
+
+def init_color_transfer_function(func: vtkColorTransferFunction, values: List[vtkColor3ub]):
+    func.AllowDuplicateScalarsOn()
+    max_x = len(values)
+    for idx, value in enumerate(values):
+        v = [value[i] / 255 for i in range(3)]
+        func.AddRGBPoint(clamp(idx - 0.5, 0, max_x), *v)
+        func.AddRGBPoint(clamp(idx + 0.5, 0, max_x), *v)
+
+
+def init_opacity_transfer_function(func: vtkPiecewiseFunction, values: List[float]):
+    func.AllowDuplicateScalarsOn()
+    max_x = len(values)
+    for idx, value in enumerate(values):
+        v = _make_opacity_value(value)
+        func.AddPoint(clamp(idx - 0.5, 0, max_x), v)
+        func.AddPoint(clamp(idx + 0.5, 0, max_x), v)
+
+
 class SynchronizedRenderWidget(QWidget):
     camera = vtkCamera()
 
     def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray,
-                 volume_idx: int, color_list: List[vtkmodules.vtkCommonDataModel.vtkColor3d], iso_opacities: List[float]):
+                 volume_idx: int, color_list: List[QColor], iso_opacities: List[float]):
         super().__init__()
 
         self.__volume_idx = volume_idx
@@ -40,22 +61,21 @@ class SynchronizedRenderWidget(QWidget):
         self.vertical_layout.setContentsMargins(0, 0, 0, 0)
         self.vertical_layout.addWidget(self.__dummy_widget)
 
-
         self.ren = vtkRenderer()
         self.ren.SetActiveCamera(self.camera)
 
         # Create transfer mapping scalar value to color according to color list and iso 0-11
         self.colorTransferFunction = vtkColorTransferFunction()
-        for i in range(12):
-            self.colorTransferFunction.AddRGBPoint(i, color_list[i][0], color_list[i][1], color_list[i][2])
+        init_color_transfer_function(self.colorTransferFunction, color_list)
+        self.opacityTransferFunction = vtkPiecewiseFunction()
+        init_opacity_transfer_function(self.opacityTransferFunction, iso_opacities)
 
         # The property describes how the data will look.
         self.volumeProperty = vtkVolumeProperty()
+        self.volumeProperty.ShadeOff()
+        self.volumeProperty.SetInterpolationTypeToNearest()
         self.volumeProperty.SetColor(self.colorTransferFunction)
-        self.opacityTransferFunction = None
-        self.update_iso_opacities(iso_opacities)
-        self.volumeProperty.ShadeOn()
-        self.volumeProperty.SetInterpolationTypeToLinear()
+        self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
 
         # The volume holds the mapper and the property and
         # can be used to position/orient the volume.
@@ -110,17 +130,34 @@ class SynchronizedRenderWidget(QWidget):
             if self.active:
                 self.volumeMapper.ReleaseGraphicsResources(self.renderWindowWidget.GetRenderWindow())
 
-    def update_iso_opacities(self, iso_opacities: List[float]):
-        self.opacityTransferFunction = vtkPiecewiseFunction()
-        for i in range(12):
-            self.opacityTransferFunction.AddPoint(i, iso_opacities[i])
-        self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
+    def update_label_opacity(self, idx: int, label_opacity: float):
+        val = _make_opacity_value(label_opacity)
+        node = [0.0] * 4
+        self.opacityTransferFunction.GetNodeValue(idx * 2, node)
+        node[1] = val
+        self.opacityTransferFunction.SetNodeValue(idx * 2, node)
+        self.opacityTransferFunction.GetNodeValue(idx * 2 + 1, node)
+        node[1] = val
+        self.opacityTransferFunction.SetNodeValue(idx * 2 + 1, node)
+        #self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
+
+    def update_label_color(self, idx: int, label_color: vtkColor3ub):
+        val = [label_color[0], label_color[1], label_color[2]]
+        node = [0.0] * 6
+        self.colorTransferFunction.GetNodeValue(idx * 2, node)
+        node[1:4] = val
+        self.colorTransferFunction.SetNodeValue(idx * 2, node)
+        self.colorTransferFunction.GetNodeValue(idx * 2 + 1, node)
+        node[1:4] = val
+        self.colorTransferFunction.SetNodeValue(idx * 2 + 1, node)
+        self.volume.Update()
+        # self.volumeProperty.SetColor(self.opacityTransferFunction)
 
     def __init(self, volume_idx: int):
         assert not self.__active
 
         self.renderWindowWidget = SynchronizedQVTKRenderWindowInteractor()
-        self.renderWindowWidget.setToolTip("Volume "+str(volume_idx+1))
+        self.renderWindowWidget.setToolTip("Volume " + str(volume_idx + 1))
         self.renderWindowWidget.GetRenderWindow().AddRenderer(self.ren)
         self.volumeMapper.SetInputDataObject(0, self.image)
         self.volume.SetMapper(None)
@@ -145,11 +182,11 @@ class SynchronizedRenderWidget(QWidget):
         self.renderWindowWidget = None
 
     @property
-    def mem_size(self) -> int:
+    def mem_size(self) -> float:
         """
         Returns memory size of volume in MB.
         """
-        return self.image.GetActualMemorySize() >> 10
+        return self.image.GetActualMemorySize() / (1 << 10)
 
     def set_volume(self, volume: np.ndarray):
         self.image.GetPointData().SetScalars(convert(volume))
