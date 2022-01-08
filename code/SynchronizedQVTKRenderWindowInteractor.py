@@ -1,13 +1,11 @@
-from PySide6.QtGui import QPaintEvent
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtkmodules.vtkRenderingCore import vtkRenderWindow
 from vtkmodules.vtkRenderingUI import vtkGenericRenderWindowInteractor
 
-from settings.Delegate import Delegate
+from common import Delegate
 
 
 class HookedInteractor(vtkGenericRenderWindowInteractor):
-
     on_change = Delegate()
 
     def Render(self, src=None):
@@ -35,7 +33,6 @@ class HookedInteractor(vtkGenericRenderWindowInteractor):
 
 
 class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
-
     on_key_press_event = Delegate()
     on_key_release_event = Delegate()
 

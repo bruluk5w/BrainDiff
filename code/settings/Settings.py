@@ -1,6 +1,6 @@
 from typing import Callable
 
-from .Delegate import Delegate
+from common import Delegate
 from .EditableIntervalSlider import EditableIntervalSlider
 from .Popup import Popup
 
