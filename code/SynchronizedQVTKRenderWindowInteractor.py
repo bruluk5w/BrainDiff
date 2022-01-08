@@ -12,7 +12,6 @@ class HookedInteractor(vtkGenericRenderWindowInteractor):
         if src is not self:
             super().Render()
             if src is None:
-                print('Interactor Render')
                 self.on_change(self)
 
     def TimerEvent(self):

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import vtk
@@ -83,7 +83,7 @@ class SynchronizedRenderWidget(QWidget):
         self.volume.SetProperty(self.volumeProperty)
         self.volumeMapper = vtkSmartVolumeMapper()
 
-        self.renderWindowWidget = None
+        self.renderWindowWidget: Union[None, SynchronizedQVTKRenderWindowInteractor] = None
         self.__active = False
         self.active = True
 
@@ -139,7 +139,8 @@ class SynchronizedRenderWidget(QWidget):
         self.opacityTransferFunction.GetNodeValue(idx * 2 + 1, node)
         node[1] = val
         self.opacityTransferFunction.SetNodeValue(idx * 2 + 1, node)
-        #self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
+        if self.active:
+            self.renderWindowWidget.on_change(None)
 
     def update_label_color(self, idx: int, label_color: vtkColor3ub):
         val = [label_color[0], label_color[1], label_color[2]]
@@ -150,8 +151,8 @@ class SynchronizedRenderWidget(QWidget):
         self.colorTransferFunction.GetNodeValue(idx * 2 + 1, node)
         node[1:4] = val
         self.colorTransferFunction.SetNodeValue(idx * 2 + 1, node)
-        self.volume.Update()
-        # self.volumeProperty.SetColor(self.opacityTransferFunction)
+        if self.active:
+            self.renderWindowWidget.on_change(None)
 
     def __init(self, volume_idx: int):
         assert not self.__active
