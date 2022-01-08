@@ -1,10 +1,8 @@
 from typing import Callable
 
-from PySide6.QtWidgets import QSlider
-
+from .Delegate import Delegate
 from .EditableIntervalSlider import EditableIntervalSlider
 from .Popup import Popup
-from .Delegate import Delegate
 
 
 class Settings:
@@ -35,9 +33,9 @@ class Settings:
 
 class SetGpuMemLimitUI(Popup):
     def __init__(self, settings: Settings, cb: Callable[[], None] = None):
-        super().__init__(cb)
+        super().__init__(cb, "Set GPU Memory Limit")
         self.__settings = settings
-        self.__slider = EditableIntervalSlider(minimum=0, maximum=1024)
+        self.__slider = EditableIntervalSlider(minimum=0, maximum=8192, unit='MB')
         self.layout().addWidget(self.__slider)
         self.__slider.set_value(self.__settings.gpu_mem_limit)
         self.__slider.value_changed.connect(self.set_value)

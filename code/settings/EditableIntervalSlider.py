@@ -1,18 +1,20 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QSlider, QHBoxLayout, QSpinBox, QSizePolicy, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QSlider, QHBoxLayout, QSpinBox, QLabel
 
 
 class EditableIntervalSlider(QWidget):
-    def __init__(self, value=0, minimum=0, maximum=100, parent=None, orientation=Qt.Horizontal, tracking=False):
+    def __init__(self, value=0, minimum=0, maximum=100, unit='', parent=None, orientation=Qt.Horizontal,
+                 tracking=False):
         super().__init__(parent)
         assert minimum <= value <= maximum
+        assert type(unit) is str
+        self.__unit = unit
         self.__slider = QSlider(orientation)
         self.__slider.setTracking(tracking)
         self.__slider.setMinimum(minimum)
         self.__slider.setMaximum(maximum)
         self.__slider.setValue(value)
         self.__main_layout = QVBoxLayout()
-        self.sizePolicy().setVerticalPolicy(QSizePolicy.Minimum)
         self.setLayout(self.__main_layout)
         self.__main_layout.addWidget(self.__slider)
         self.__horizontal_layout = QHBoxLayout()
@@ -21,16 +23,17 @@ class EditableIntervalSlider(QWidget):
         self.__min_edit.setAccelerated(True)
         self.__min_edit.setMaximum(1 << 30)
         self.__min_edit.setValue(minimum)
+        self.__min_edit.setKeyboardTracking(False)
         self.__horizontal_layout.addWidget(self.__min_edit, alignment=Qt.AlignLeft | Qt.AlignTop)
         self.__value_label = QLabel()
-        self.__value_label.setText(str(self.__slider.value()))
+        self.__value_label.setText(self.__get_label_text(self.__slider.value()))
         self.__slider.sliderMoved.connect(self.__slider_moved)
-        self.__horizontal_layout.addWidget(self.__value_label)
-        self.__min_edit.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
+        self.__horizontal_layout.addWidget(self.__value_label, alignment=Qt.AlignLeft | Qt.AlignTop)
         self.__max_edit = QSpinBox()
         self.__max_edit.setAccelerated(True)
         self.__max_edit.setMaximum(1 << 30)
         self.__max_edit.setValue(maximum)
+        self.__max_edit.setKeyboardTracking(False)
         self.__horizontal_layout.addWidget(self.__max_edit, alignment=Qt.AlignRight | Qt.AlignTop)
 
         self.__min_edit.valueChanged.connect(self.__set_minimum)
@@ -79,4 +82,7 @@ class EditableIntervalSlider(QWidget):
         self.__slider.setMaximum(value)
 
     def __slider_moved(self, pos):
-        self.__value_label.setText(str(pos))
+        self.__value_label.setText(self.__get_label_text(pos))
+
+    def __get_label_text(self, value):
+        return '{} {}'.format(str(value), self.__unit)
