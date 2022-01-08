@@ -1,7 +1,7 @@
 from typing import NamedTuple, List, Sequence
 
 from PySide6.QtGui import QPalette, Qt, QColor
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSlider
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSlider, QPushButton, QSizePolicy, QColorDialog
 from vtkmodules.vtkCommonDataModel import vtkColor3ub
 
 from common import Delegate
@@ -13,13 +13,16 @@ def seq_to_qt_color(col: Sequence[int]) -> QColor:
     return QColor(col[0], col[1], col[2])
 
 
-def seq_to_vtk_color(col: Sequence[int]) -> vtkColor3ub:
-    assert len(col) >= 3, all(0 <= c <= 255 for c in col)
+def qt_to_vtk_color(col: QColor) -> vtkColor3ub:
+    value = (col.red(), col.green(), col.blue())
+    assert all(0 <= c <= 255 for c in value)
     vtk_color = vtkColor3ub()
-    vtk_color[0] = col[0]
-    vtk_color[1] = col[1]
-    vtk_color[2] = col[2]
+    vtk_color[0], vtk_color[1], vtk_color[2] = value
     return vtk_color
+
+
+def set_widget_bg_color(widget: QWidget, col: vtkColor3ub):
+    widget.setStyleSheet('background-color: rgb({}, {}, {})'.format(col[0], col[1], col[2]))
 
 
 LabelSetting = NamedTuple('LabelSetting', (
@@ -46,15 +49,22 @@ class LabelColorWidget(QWidget):
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
 
-        self.__sliders = []
-        palette = QPalette()
+        self.__color_buttons = []
         for i, label_setting in enumerate(self.__label_settings):
             self.__label_colors.append(label_setting.default_color)
 
-            iso_name = QLabel()
+            self.layout().addWidget(btn := QPushButton())
+            btn.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+            set_widget_bg_color(btn, label_setting.default_color)
+            btn.setLayout(layout := QVBoxLayout())
+            btn.setAutoFillBackground(True)
+            btn.pressed.connect(partial(self.__handle_color_button_pressed, i))
+            self.__color_buttons.append(btn)
+
+            layout.addWidget(iso_name := QLabel())
             iso_name.setText(' ' + label_setting.name)
+            iso_name.setStyleSheet('background-color: rgb(255, 255, 255)')
             iso_name.setAutoFillBackground(True)
-            self.layout().addWidget(iso_name)
 
             """
             palette.setColor(iso_name.backgroundRole(),
@@ -67,17 +77,12 @@ class LabelColorWidget(QWidget):
             iso_name.setPalette(palette)
             """
 
-            slider = QSlider(Qt.Horizontal)
-            palette.setColor(slider.backgroundRole(), seq_to_qt_color(label_setting.default_color))
-            slider.setPalette(palette)
-            slider.setAutoFillBackground(True)
+            layout.addWidget(slider := QSlider(Qt.Horizontal))
             slider.setTracking(False)
             slider.setMinimum(0)
             slider.setMaximum(255)
             slider.setValue(0)
             slider.valueChanged.connect(partial(self.__handle_opacity_changed, i))
-            self.layout().addWidget(slider)
-            self.__sliders.append(slider)
 
     @property
     def opacities(self):
@@ -108,5 +113,17 @@ class LabelColorWidget(QWidget):
         self.opacity_changed(idx, value)
 
     def __handle_color_changed(self, idx, color: QColor):
-        self.__label_colors[idx] = seq_to_vtk_color(color)
+        color = self.__label_colors[idx] = qt_to_vtk_color(color)
+        set_widget_bg_color(self.__color_buttons[idx], color)
         self.color_changed(idx, color)
+
+    def __handle_color_button_pressed(self, idx:int):
+        color_picker = QColorDialog(
+            seq_to_qt_color(self.__label_colors[idx]),
+            parent=self
+        )
+        color_picker.setWindowTitle('Select Color for \'{}\''.format(self.__label_settings[idx].name))
+        color_picker.setOption(QColorDialog.ShowAlphaChannel, False)
+        color_picker.currentColorChanged.connect(partial(self.__handle_color_changed, idx))
+        color_picker.show()
+
