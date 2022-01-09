@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Set
 
 import numpy as np
 import vtk
@@ -7,7 +7,8 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonColor import vtkNamedColors
 from vtkmodules.vtkCommonDataModel import vtkImageData, vtkPiecewiseFunction, vtkColor3ub
-from vtkmodules.vtkRenderingCore import vtkRenderer, vtkColorTransferFunction, vtkVolumeProperty, vtkVolume, vtkCamera
+from vtkmodules.vtkRenderingCore import vtkRenderer, vtkColorTransferFunction, vtkVolumeProperty, vtkVolume, vtkCamera, \
+    vtkLight
 from vtkmodules.vtkRenderingVolumeOpenGL2 import vtkSmartVolumeMapper
 
 from SynchronizedQVTKRenderWindowInteractor import SynchronizedQVTKRenderWindowInteractor
@@ -48,13 +49,22 @@ def init_opacity_transfer_function(func: vtkPiecewiseFunction, values: List[floa
 
 class SynchronizedRenderWidget(QWidget):
     camera = vtkCamera()
+    active_widgets: Set['SynchronizedRenderWidget'] = set()
 
-    def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray,
-                 volume_idx: int, color_list: List[QColor], iso_opacities: List[float]):
+    @classmethod
+    def reset_camera(cls):
+        if cls.active_widgets:
+            next(iter(cls.active_widgets)).ren.ResetCamera()
+
+    def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray, volume_idx: int, color_list: List[QColor],
+                 iso_opacities: List[float], shaded=False):
         super().__init__()
 
         self.__volume_idx = volume_idx
         self.__is_gpu = is_gpu
+        self.__shaded = not shaded
+        self.__active = False
+
         self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
         self.__dummy_widget = QWidget()
         self.image = image
@@ -67,7 +77,9 @@ class SynchronizedRenderWidget(QWidget):
 
         self.ren = vtkRenderer()
         self.ren.SetActiveCamera(self.camera)
-
+        light = vtkLight()
+        light.SetColor(1, 1, 1)
+        self.ren.AddLight(light)
         # Create transfer mapping scalar value to color according to color list and iso 0-11
         self.colorTransferFunction = vtkColorTransferFunction()
         init_color_transfer_function(self.colorTransferFunction, color_list)
@@ -76,11 +88,9 @@ class SynchronizedRenderWidget(QWidget):
 
         # The property describes how the data will look.
         self.volumeProperty = vtkVolumeProperty()
-        self.volumeProperty.ShadeOff()
         self.volumeProperty.SetInterpolationTypeToNearest()
         self.volumeProperty.SetColor(self.colorTransferFunction)
         self.volumeProperty.SetScalarOpacity(self.opacityTransferFunction)
-
         # The volume holds the mapper and the property and
         # can be used to position/orient the volume.
         self.volume = vtkVolume()
@@ -88,15 +98,13 @@ class SynchronizedRenderWidget(QWidget):
         self.volumeMapper = vtkSmartVolumeMapper()
 
         self.renderWindowWidget: Union[None, SynchronizedQVTKRenderWindowInteractor] = None
-        self.__active = False
         self.active = True
-
+        self.shaded = shaded
         self.ren.AddVolume(self.volume)
         self.ren.SetBackground(vtkNamedColors().GetColor3d('Black'))
         self.ren.GetActiveCamera().Azimuth(45)
         self.ren.GetActiveCamera().Elevation(30)
         self.ren.ResetCameraClippingRange()
-        self.ren.ResetCamera()
 
     @property
     def active(self):
@@ -124,15 +132,33 @@ class SynchronizedRenderWidget(QWidget):
         assert isinstance(value, bool)
         if self.__is_gpu != value:
             self.__is_gpu = value
-            self.adjust_volume_mapper()
+            self._adjust_volume_mapper()
 
-    def adjust_volume_mapper(self):
+    def _adjust_volume_mapper(self):
         if self.__is_gpu:
             self.volumeMapper.SetRequestedRenderModeToGPU()
         else:
             self.volumeMapper.SetRequestedRenderModeToRayCast()
             if self.active:
                 self.volumeMapper.ReleaseGraphicsResources(self.renderWindowWidget.GetRenderWindow())
+
+    @property
+    def shaded(self):
+        return self.__shaded
+
+    @shaded.setter
+    def shaded(self, value):
+        if value != self.__shaded:
+            if value:
+                self.volumeProperty.ShadeOn()
+                self.volumeProperty.SetDiffuse(0, 2)
+            else:
+                self.volumeProperty.ShadeOff()
+
+            if self.active:
+                self.renderWindowWidget.on_change(None)
+
+        self.__shaded = value
 
     def update_label_opacity(self, idx: int, label_opacity: float):
         val = _make_opacity_value(label_opacity)
@@ -166,7 +192,7 @@ class SynchronizedRenderWidget(QWidget):
         self.renderWindowWidget.GetRenderWindow().AddRenderer(self.ren)
         self.volumeMapper.SetInputDataObject(0, self.image)
         self.volume.SetMapper(None)
-        self.adjust_volume_mapper()
+        self._adjust_volume_mapper()
 
         self.volume.SetMapper(self.volumeMapper)
 
@@ -175,9 +201,11 @@ class SynchronizedRenderWidget(QWidget):
 
         self.vertical_layout.replaceWidget(self.__dummy_widget, self.renderWindowWidget)
         self.__active = True
+        self.active_widgets.add(self)
 
     def __release(self):
         assert self.__active
+        self.active_widgets.remove(self)
         self.__active = False
         self.vertical_layout.replaceWidget(self.renderWindowWidget, self.__dummy_widget)
         self.volume.SetMapper(None)
