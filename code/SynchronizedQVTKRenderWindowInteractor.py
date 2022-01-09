@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt
 from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtkmodules.vtkRenderingCore import vtkRenderWindow
 from vtkmodules.vtkRenderingUI import vtkGenericRenderWindowInteractor
@@ -42,8 +43,7 @@ class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
         interactor.SetRenderWindow(rw)
 
         super().__init__(*k, **kw)
-        # self.on_render += self.handle_render
-        # self.on_paint += self.handle_paint
+        self.setAttribute(Qt.WA_DeleteOnClose)
         interactor.on_change += self.on_change
         self.on_key_press_event += self.keyPressEvent
         self.on_key_release_event += self.keyReleaseEvent
@@ -63,3 +63,13 @@ class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
             super().keyReleaseEvent(ev)
             if src is None:
                 self.on_key_release_event(ev, self)
+
+    def Finalize(self):
+        self._Iren.on_change -= self.on_change
+        self.on_key_press_event -= self.keyPressEvent
+        self.on_key_release_event -= self.keyReleaseEvent
+        super().Finalize()
+        self._Iren.SetRenderWindow(None)
+        self.GetRenderWindow().SetInteractor(None)
+        self._Iren = None
+        self._RenderWindow = None

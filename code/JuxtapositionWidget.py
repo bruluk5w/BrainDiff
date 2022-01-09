@@ -34,6 +34,7 @@ class JuxtapositionWidget(DataView):
         splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         splitter.setChildrenCollapsible(False)
         self.__label_color_widget = BrainWebLabelColorWidget()
+        self.__label_color_widget.opacities[1] = 50  # let's not confront the user at first with a black screen
         self.__label_color_widget.opacity_changed += self._update_iso_opacities
         self.__label_color_widget.color_changed += self._update_iso_colors
         splitter.addWidget(self.__label_color_widget)
@@ -83,7 +84,6 @@ class JuxtapositionWidget(DataView):
         self._layout_renderers()
 
     def remove_volume(self, idx: int):
-        print('Volume {} removed.'.format(idx))
         if idx in self.__render_widgets:
             renderer = self.__render_widgets[idx]
             renderer.active = False

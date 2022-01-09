@@ -191,7 +191,6 @@ class SynchronizedRenderWidget(QWidget):
         self.renderWindowWidget.setToolTip("Volume " + str(volume_idx + 1))
         self.renderWindowWidget.GetRenderWindow().AddRenderer(self.ren)
         self.volumeMapper.SetInputDataObject(0, self.image)
-        self.volume.SetMapper(None)
         self._adjust_volume_mapper()
 
         self.volume.SetMapper(self.volumeMapper)
@@ -205,6 +204,7 @@ class SynchronizedRenderWidget(QWidget):
 
     def __release(self):
         assert self.__active
+        self.volumeMapper.ReleaseGraphicsResources(self.renderWindowWidget.GetRenderWindow())
         self.active_widgets.remove(self)
         self.__active = False
         self.vertical_layout.replaceWidget(self.renderWindowWidget, self.__dummy_widget)
