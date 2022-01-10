@@ -3,7 +3,7 @@ from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtkmodules.vtkRenderingCore import vtkRenderWindow
 from vtkmodules.vtkRenderingUI import vtkGenericRenderWindowInteractor
 
-from common import Delegate
+from common import Delegate, InteractorStyle, get_interactor_style, set_interactor_style
 
 
 class HookedInteractor(vtkGenericRenderWindowInteractor):
@@ -35,6 +35,7 @@ class HookedInteractor(vtkGenericRenderWindowInteractor):
 class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
     on_key_press_event = Delegate()
     on_key_release_event = Delegate()
+    current_interactor_style: InteractorStyle = InteractorStyle.JOYSTICK_CAMERA
 
     def __init__(self, *k, **kw):
         assert 'iren' not in kw and 'rw' not in kw
@@ -47,6 +48,12 @@ class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
         interactor.on_change += self.on_change
         self.on_key_press_event += self.keyPressEvent
         self.on_key_release_event += self.keyReleaseEvent
+        set_interactor_style(self._Iren.GetInteractorStyle(),
+                             SynchronizedQVTKRenderWindowInteractor.current_interactor_style)
+
+    @property
+    def interactor_style(self) -> InteractorStyle:
+        return get_interactor_style(self._Iren.GetInteractorStyle())
 
     def on_change(self, src):
         if src is not self._Iren:
@@ -57,6 +64,7 @@ class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
             super().keyPressEvent(ev)
             if src is None:
                 self.on_key_press_event(ev, self)
+                SynchronizedQVTKRenderWindowInteractor.current_interactor_style = self.interactor_style
 
     def keyReleaseEvent(self, ev, src=None):
         if src is not self:
