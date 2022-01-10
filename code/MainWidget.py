@@ -5,7 +5,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QWidget, QSplitter, QVBoxLayout, QTabWidget, QSizePolicy
 from vtkmodules.vtkCommonDataModel import vtkImageData
 
-from JuxtapositionWidget import JuxtapositionWidget
+from JuxtapositionWidget import PreservingDataView
 from VolumeListWidget import VolumeListWidget
 
 
@@ -26,7 +26,7 @@ class MainWidget(QWidget):
         splitter.addWidget(self.__dataViews)
 
         ## TODO: create other data views
-        self.__dataViews.addTab(view := JuxtapositionWidget(image, gpu_mem_limit), view.name)
+        self.__dataViews.addTab(view := PreservingDataView(image, gpu_mem_limit), view.name)
         self.__last_tab_idx = 0
 
         self.__dataViews.currentChanged.connect(self._handle_data_view_changed)

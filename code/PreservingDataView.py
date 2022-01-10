@@ -10,7 +10,7 @@ from RenderWidget import SynchronizedRenderWidget
 from common import DataView
 
 
-class JuxtapositionWidget(DataView):
+class PreservingDataView(DataView):
 
     @property
     def name(self):
