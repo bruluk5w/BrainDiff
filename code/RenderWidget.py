@@ -57,7 +57,7 @@ class SynchronizedRenderWidget(QWidget):
             next(iter(cls.active_widgets)).ren.ResetCamera()
 
     def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray, volume_idx: int, color_list: List[QColor],
-                 iso_opacities: List[float], shaded=False):
+                 iso_opacities: List[float], shaded=False, progressive=True):
         super().__init__()
 
         self.__volume_idx = volume_idx
@@ -96,6 +96,7 @@ class SynchronizedRenderWidget(QWidget):
         self.volume = vtkVolume()
         self.volume.SetProperty(self.volumeProperty)
         self.volumeMapper = vtkSmartVolumeMapper()
+        self.volumeMapper.SetInteractiveAdjustSampleDistances(False)
 
         self.renderWindowWidget: Union[None, SynchronizedQVTKRenderWindowInteractor] = None
         self.active = True
@@ -105,9 +106,22 @@ class SynchronizedRenderWidget(QWidget):
         self.ren.GetActiveCamera().Azimuth(45)
         self.ren.GetActiveCamera().Elevation(30)
         self.ren.ResetCameraClippingRange()
+        self.progressive = progressive
 
     @property
-    def active(self):
+    def progressive(self) -> bool:
+        return self.volumeMapper.GetAutoAdjustSampleDistances()
+
+    @progressive.setter
+    def progressive(self, value):
+        if value != self.progressive:
+            self.volumeMapper.SetAutoAdjustSampleDistances(value)
+            self.volumeMapper.SetSampleDistance(-1)
+            if self.active:
+                self.renderWindowWidget.on_change(None)
+
+    @property
+    def active(self) -> bool:
         return self.__active
 
     @active.setter
