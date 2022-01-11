@@ -1,13 +1,15 @@
-from typing import Dict, Callable
+from typing import Dict, Callable, Optional
 
 import numpy as np
-from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy, \
+    QSlider, QComboBox
 from vtkmodules.vtkCommonDataModel import vtkImageData, vtkColor3ub
 
 from BrainWebLabelColorWidget import BrainWebLabelColorWidget
-from InterchangeableViewHelper import InterchangeableView
+from InterchangeableViewHelper import InterchangeableView, SmoothType
 from RenderWidget import SynchronizedRenderWidget
-from common import DataView
+from common import DataView, combo_box_add_enum_items
 
 
 class PreservingDataView(DataView):
@@ -18,15 +20,11 @@ class PreservingDataView(DataView):
 
     def __init__(self, image: vtkImageData, gpu_limit: int, parent=None):
         super().__init__(gpu_limit, parent)
-        self._interchangeableView = None
+        self._interchangeableView: Optional[InterchangeableView] = None
         self.__template_image = image
         self.__render_widgets: Dict[int, SynchronizedRenderWidget] = {}
         self.setLayout(layout := QVBoxLayout())
-
-        layout.addWidget(container := QWidget())
-        container.setLayout(settings_layout := QHBoxLayout())
-        container.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
-        self.__create_settings_ui(settings_layout)
+        self.__create_settings_ui(layout)
 
         # Split between visualisation specific setting and actual visualisation
         layout.addWidget(splitter := QSplitter())
@@ -44,15 +42,23 @@ class PreservingDataView(DataView):
 
         self._camera_reset = False
 
-    def __create_settings_ui(self, settings_layout: QHBoxLayout):
-        def button(text: str, cb: Callable, toggled=False) -> QPushButton:
+    def __create_settings_ui(self, parent_layout: QVBoxLayout):
+        def new_layout():
+            parent_layout.addWidget(container := QWidget())
+            container.setLayout(layout := QHBoxLayout())
+            container.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+            return layout, container
+
+        layout, _ = new_layout()
+
+        def button(text: str, cb: Callable, toggled=False, layout=layout) -> QPushButton:
             btn = QPushButton(text=text)
             btn.setCheckable(True)
             if toggled:
                 btn.toggle()
             btn.toggled.connect(cb)
             btn.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-            settings_layout.addWidget(btn)
+            layout.addWidget(btn)
             return btn
 
         self.__shaded_btn = button('Shaded', self._set_shaded)
@@ -62,9 +68,35 @@ class PreservingDataView(DataView):
                                          'the GPU memory limit in the settings.')
         self.__interchangeable_btn = button('Interchangeable', self._set_interchangeable)
 
+        layout, self._interchangeable_settings_container = new_layout()
+        self.__interchangeable_slider = slider = QSlider(orientation=Qt.Horizontal)
+        slider.setMinimum(0)
+        slider.setMaximum(0)
+        slider.valueChanged.connect(self._set_page)
+        layout.addWidget(slider)
+        self.__interchangeable_smooth_type = box = QComboBox()
+        combo_box_add_enum_items(box, SmoothType)
+        box.currentIndexChanged.connect(self._set_smooth_type)
+        layout.addWidget(box)
+        self._interchangeable_settings_container.hide()
+
     @property
     def is_interchangeable(self):
         return self._interchangeableView is not None
+
+    def _set_page(self, value: float):
+        if self.is_interchangeable:
+            self._interchangeableView.set_page(value)
+
+    @property
+    def smooth_type(self):
+        return self.__interchangeable_smooth_type.currentData(Qt.UserRole)
+
+    def _set_smooth_type(self, idx: int):
+        if self.is_interchangeable:
+            smooth_type = self.__interchangeable_smooth_type.itemData(idx, Qt.UserRole)
+            assert smooth_type == self.smooth_type
+            self._interchangeableView.smooth_type = smooth_type
 
     def gpu_mem_limit_changed(self, limit: int):
         super().gpu_mem_limit_changed(limit)
@@ -107,12 +139,14 @@ class PreservingDataView(DataView):
 
         if self.is_interchangeable:
             self._interchangeableView.add(self.__render_widgets[idx])
+            self.__interchangeable_slider.setMaximum(self._interchangeableView.count)
 
     def remove_volume(self, idx: int):
         if idx in self.__render_widgets:
             renderer = self.__render_widgets[idx]
             if self.is_interchangeable:
                 self._interchangeableView.remove(self.__render_widgets[idx])
+                self.__interchangeable_slider.setMaximum(self._interchangeableView.count)
 
             renderer.active = False
         else:
@@ -141,10 +175,13 @@ class PreservingDataView(DataView):
             if value:
                 for renderer in self.__render_widgets.values():
                     renderer.off_screen = True
-                self._interchangeableView = InterchangeableView(self.__grid_container)
+                self._interchangeableView = InterchangeableView(self.__grid_container, self.smooth_type)
                 self._layout_renderers()
                 for renderer in (r for r in self.__render_widgets.values() if r.active):
                     self._interchangeableView.add(renderer)
+
+                self.__interchangeable_slider.setMaximum(self._interchangeableView.count)
+                self._interchangeable_settings_container.show()
             else:
                 for renderer in (r for r in self.__render_widgets.values() if r.active):
                     self._interchangeableView.remove(renderer)
@@ -152,8 +189,9 @@ class PreservingDataView(DataView):
                 for renderer in self.__render_widgets.values():
                     renderer.off_screen = False
 
-                x = self._interchangeableView.finalize()
+                self._interchangeableView.finalize()
                 self._interchangeableView = None
+                self._interchangeable_settings_container.hide()
                 self._layout_renderers()
 
     def _layout_renderers(self):

@@ -1,3 +1,5 @@
+from enum import IntEnum
+from math import cos, pi
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from vtkmodules.vtkImagingCore import vtkImageBlend
@@ -5,19 +7,28 @@ from vtkmodules.vtkRenderingCore import vtkRenderWindow, vtkActor2D, vtkRenderer
 
 from RenderWidget import SynchronizedRenderWidget
 from SynchronizedQVTKRenderWindowInteractor import SynchronizedQVTKRenderWindowInteractor
-from common import InputForwardingRenderWindowInteractor
+from common import InputForwardingRenderWindowInteractor, clamp
+
+
+class SmoothType(IntEnum):
+    DISCRETE = 0
+    LINEAR = 1
+    EASE = 2
+    ALL = 3
 
 
 class InterchangeableView:
     """
-    Accepts RenderWidgets, composits their off-screen-rendered results and displays the result in a given widget.
+    Accepts RenderWidgets, composites their off-screen-rendered results and displays the result in a given widget.
     """
-    def __init__(self, view_container: QWidget):
+
+    def __init__(self, view_container: QWidget, smooth_type: SmoothType):
         """
         :param view_container: The widget in which the composited result is displayed
         """
         assert view_container is not None
         self._parent = view_container
+        self._smooth_type = smooth_type
 
         self.graphics_target_window = None
         self.interactor = None
@@ -39,6 +50,48 @@ class InterchangeableView:
         self.linked_renderer = None
         self.added_renderers = set()
 
+        self._t = 0
+
+    @property
+    def count(self):
+        return self._image_blend.GetNumberOfInputConnections(0)
+
+    @property
+    def smooth_type(self):
+        return self._smooth_type
+
+    @smooth_type.setter
+    def smooth_type(self, value: bool):
+        if self._smooth_type != value:
+            self._smooth_type = value
+            self.set_page(self._t)
+
+    def set_page(self, page: float):
+        n = self.count
+        if self.smooth_type == SmoothType.DISCRETE:
+            map_x = lambda x: 1 if -0.5 <= x < 0.5 else 0
+        elif self.smooth_type == SmoothType.LINEAR:
+            map_x = lambda x: 1 - abs(x)
+        elif self.smooth_type == SmoothType.EASE:
+            map_x = lambda x: 0.5 * (1 + cos(x * pi))
+        else:
+            map_x = None
+
+        self._t = t = clamp(page, 0, n - 1)
+        if self.smooth_type == SmoothType.ALL:
+            opacities = [1] * n
+        else:
+            opacities = [
+                map_x(x - t) if -1 <= x - t <= 1 else 0
+                for x in range(n)
+            ]
+
+        for i, o in enumerate(opacities):
+            self._image_blend.SetOpacity(i, o)
+
+    def _get_opacity(self, v):
+        pass
+
     def add(self, renderer: SynchronizedRenderWidget):
         assert renderer not in self.added_renderers
         self.added_renderers.add(renderer)
@@ -47,10 +100,8 @@ class InterchangeableView:
         if n == 1:
             self.mapper.SetInputConnection(0, self._image_blend.GetOutputPort())
 
-        for i in range(n):
-            self._image_blend.SetOpacity(i, 1/n)
-
         self._image_blend.AddInputConnection(0, renderer.off_screen_img_output)
+        self.set_page(self._t)
 
         if self.linked_renderer is None:
             self._link(renderer)
@@ -63,10 +114,11 @@ class InterchangeableView:
         if self.linked_renderer is renderer:
             self._unlink()
 
-        if self._image_blend.GetTotalNumberOfInputConnections() == 1:
+        if self._image_blend.GetNumberOfInputConnections(0) == 1:
             self.mapper.SetInputConnection(0, None)
 
         self._image_blend.RemoveInputConnection(0, renderer.off_screen_img_output)
+        self.set_page(self._t)
 
         if self.linked_renderer is None and self.added_renderers:
             self._link(next(iter(self.added_renderers)))

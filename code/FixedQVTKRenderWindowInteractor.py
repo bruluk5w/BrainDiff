@@ -538,7 +538,7 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
             self._Iren.LeftButtonReleaseEvent()
         elif self._ActiveButton == Qt.RightButton:
             self._Iren.RightButtonReleaseEvent()
-        elif self._ActiveButton == Qt.MidButton:
+        elif self._ActiveButton == Qt.MiddleButton:
             self._Iren.MiddleButtonReleaseEvent()
 
     def mouseMoveEvent(self, ev):

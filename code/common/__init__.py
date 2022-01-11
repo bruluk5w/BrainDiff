@@ -1,15 +1,15 @@
 from enum import IntEnum
 from typing import Optional
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QComboBox
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleJoystickActor, vtkInteractorStyleJoystickCamera, \
     vtkInteractorStyleTrackballActor, vtkInteractorStyleTrackballCamera, vtkInteractorStyleSwitch, \
     vtkInteractorStyleMultiTouchCamera
 
 from .DataView import DataView
 from .Delegate import Delegate
-from .LabelColorWidget import *
 from .InputForwardingRenderWindowInteractor import InputForwardingRenderWindowInteractor
+from .LabelColorWidget import *
 
 __app: Optional[QApplication] = None
 
@@ -60,3 +60,8 @@ def set_interactor_style(style: vtkInteractorStyleSwitch, s: InteractorStyle) ->
         style.SetCurrentStyleToMultiTouchCamera()
     else:
         raise Exception('Unknown vtk interactor style!')
+
+
+def combo_box_add_enum_items(cb: QComboBox, enum):
+    for e in enum:
+        cb.addItem(e.name, e)
