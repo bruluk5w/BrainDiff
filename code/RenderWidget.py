@@ -281,6 +281,7 @@ class SynchronizedRenderWidget(QWidget):
         self.__window_to_image_filter.Update(0)
 
     def resizeEvent(self, event: QResizeEvent):
+        super().resizeEvent(event)
         print('SyncedRenderWidget resized to {}'.format(event.size()))
 
     @property

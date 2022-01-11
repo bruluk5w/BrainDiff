@@ -38,6 +38,7 @@ class PreservingDataView(DataView):
         splitter.addWidget(self.__label_color_widget)
 
         self.__grid_container = QWidget()
+        self.__grid_container.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         splitter.addWidget(self.__grid_container)
 
         self._camera_reset = False
@@ -201,6 +202,7 @@ class PreservingDataView(DataView):
         if self.is_interchangeable:
             rect = self.__grid_container.contentsRect()
             for renderer in (t for t in self.__render_widgets.values() if t.active):
+                renderer.show()
                 renderer.setGeometry(rect)
                 renderer.setParent(self.__grid_container)
         else:
