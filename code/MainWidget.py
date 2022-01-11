@@ -5,7 +5,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QWidget, QSplitter, QVBoxLayout, QTabWidget, QSizePolicy
 from vtkmodules.vtkCommonDataModel import vtkImageData
 
-from JuxtapositionWidget import PreservingDataView
+from PreservingDataView import PreservingDataView
 from VolumeListWidget import VolumeListWidget
 
 

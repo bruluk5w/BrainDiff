@@ -2,16 +2,17 @@ from typing import List, Union, Set
 
 import numpy as np
 import vtk
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, Qt, QResizeEvent
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonColor import vtkNamedColors
 from vtkmodules.vtkCommonDataModel import vtkImageData, vtkPiecewiseFunction, vtkColor3ub
+from vtkmodules.vtkCommonExecutionModel import vtkAlgorithmOutput
 from vtkmodules.vtkRenderingCore import vtkRenderer, vtkColorTransferFunction, vtkVolumeProperty, vtkVolume, vtkCamera, \
-    vtkLight
+    vtkLight, vtkWindowToImageFilter
 from vtkmodules.vtkRenderingVolumeOpenGL2 import vtkSmartVolumeMapper
 
-from SynchronizedQVTKRenderWindowInteractor import SynchronizedQVTKRenderWindowInteractor
+from SynchronizedQVTKRenderWindowInteractor import SynchronizedQVTKRenderWindowInteractor, HookedInteractor
 from common import clamp
 
 
@@ -54,18 +55,22 @@ class SynchronizedRenderWidget(QWidget):
     @classmethod
     def reset_camera(cls):
         if cls.active_widgets:
-            next(iter(cls.active_widgets)).ren.ResetCamera()
+            r = next(iter(cls.active_widgets)).ren
+            r.ResetCamera()
+            r.GetActiveCamera().Azimuth(45)
+            r.GetActiveCamera().Elevation(30)
+            r.ResetCameraClippingRange()
 
     def __init__(self, is_gpu: bool, image: vtkImageData, volume: np.ndarray, volume_idx: int, color_list: List[QColor],
-                 iso_opacities: List[float], shaded=False, progressive=True):
+                 iso_opacities: List[float], shaded=False, progressive=True, off_screen=False):
         super().__init__()
 
         self.__volume_idx = volume_idx
         self.__is_gpu = is_gpu
         self.__shaded = not shaded
         self.__active = False
+        self.__off_screen = not off_screen
 
-        self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
         self.__dummy_widget = QWidget()
         self.image = image
         self.set_volume(volume)
@@ -103,10 +108,9 @@ class SynchronizedRenderWidget(QWidget):
         self.shaded = shaded
         self.ren.AddVolume(self.volume)
         self.ren.SetBackground(vtkNamedColors().GetColor3d('Black'))
-        self.ren.GetActiveCamera().Azimuth(45)
-        self.ren.GetActiveCamera().Elevation(30)
-        self.ren.ResetCameraClippingRange()
         self.progressive = progressive
+        self.__window_to_image_filter = None
+        self.off_screen = off_screen
 
     @property
     def progressive(self) -> bool:
@@ -121,6 +125,22 @@ class SynchronizedRenderWidget(QWidget):
                 self.renderWindowWidget.on_change(None)
 
     @property
+    def off_screen(self):
+        return self.__off_screen
+
+    @off_screen.setter
+    def off_screen(self, value):
+        if self.__off_screen != value:
+            self.__off_screen = value
+            if self.active:
+                self._set_off_screen(self.__off_screen)
+
+    @property
+    def off_screen_img_output(self) -> vtkAlgorithmOutput:
+        assert self.off_screen and self.active
+        return self.__window_to_image_filter.GetOutputPort()
+
+    @property
     def active(self) -> bool:
         return self.__active
 
@@ -130,10 +150,8 @@ class SynchronizedRenderWidget(QWidget):
         if self.__active != value:
             if self.__active:
                 self.__release()
-                self.hide()
             else:
                 self.__init(self.__volume_idx)
-                self.show()
 
             assert self.__active == value
 
@@ -214,7 +232,10 @@ class SynchronizedRenderWidget(QWidget):
 
         self.vertical_layout.replaceWidget(self.__dummy_widget, self.renderWindowWidget)
         self.__active = True
+        if self.__off_screen:
+            self._set_off_screen(True)
         self.active_widgets.add(self)
+        self.show()
 
     def __release(self):
         assert self.__active
@@ -224,9 +245,43 @@ class SynchronizedRenderWidget(QWidget):
         self.vertical_layout.replaceWidget(self.renderWindowWidget, self.__dummy_widget)
         self.volume.SetMapper(None)
         self.volumeMapper.SetInputDataObject(0, None)
+        if self.__off_screen:
+            self._set_off_screen(False)
+
         self.renderWindowWidget.GetRenderWindow().RemoveRenderer(self.ren)
         self.renderWindowWidget.close()
         self.renderWindowWidget = None
+
+        self.hide()
+
+    def _set_off_screen(self, value: bool):
+        if value:
+            assert self.active
+
+        self.renderWindowWidget.GetRenderWindow().SetOffScreenRendering(value)
+
+        if value:
+            self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
+            f = self.__window_to_image_filter = vtkWindowToImageFilter()
+            f.ReadFrontBufferOff()
+            f.SetInput(self.renderWindowWidget.GetRenderWindow())
+            f.Modified()
+            f.Update(0)
+            HookedInteractor.on_change += self._update_offscreen_rendering
+        else:
+            HookedInteractor.on_change -= self._update_offscreen_rendering
+            if self.__window_to_image_filter is not None:
+                self.__window_to_image_filter.SetInput(None)
+                self.__window_to_image_filter = None
+
+            self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
+
+    def _update_offscreen_rendering(self, event_src):
+        self.__window_to_image_filter.Modified()
+        self.__window_to_image_filter.Update(0)
+
+    def resizeEvent(self, event: QResizeEvent):
+        print('SyncedRenderWidget resized to {}'.format(event.size()))
 
     @property
     def mem_size(self) -> float:

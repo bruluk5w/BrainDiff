@@ -1,11 +1,11 @@
 from typing import Dict, Callable
 
 import numpy as np
-from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy
 from vtkmodules.vtkCommonDataModel import vtkImageData, vtkColor3ub
 
 from BrainWebLabelColorWidget import BrainWebLabelColorWidget
+from InterchangeableViewHelper import InterchangeableView
 from RenderWidget import SynchronizedRenderWidget
 from common import DataView
 
@@ -18,14 +18,14 @@ class PreservingDataView(DataView):
 
     def __init__(self, image: vtkImageData, gpu_limit: int, parent=None):
         super().__init__(gpu_limit, parent)
-        self.__is_interchangeable = False
+        self._interchangeableView = None
         self.__template_image = image
         self.__render_widgets: Dict[int, SynchronizedRenderWidget] = {}
         self.setLayout(layout := QVBoxLayout())
 
         layout.addWidget(container := QWidget())
         container.setLayout(settings_layout := QHBoxLayout())
-        container.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        container.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
         self.__create_settings_ui(settings_layout)
 
         # Split between visualisation specific setting and actual visualisation
@@ -61,6 +61,10 @@ class PreservingDataView(DataView):
                                          'the GPU memory limit in the settings.')
         self.__interchangeable_btn = button('Interchangeable', self._set_interchangeable)
 
+    @property
+    def is_interchangeable(self):
+        return self._interchangeableView is not None
+
     def gpu_mem_limit_changed(self, limit: int):
         super().gpu_mem_limit_changed(limit)
         used_mem = 0
@@ -75,20 +79,20 @@ class PreservingDataView(DataView):
         pass
 
     def add_volume(self, idx: int, volume: np.ndarray):
-        print('Volume {} added.'.format(idx))
         is_gpu = sum(r.mem_size for r in self.__render_widgets.values() if r.active) < self._gpu_mem_limit
         if idx in self.__render_widgets:
-            renderer = self.__render_widgets[idx]
-            renderer.set_volume(volume)
-            if not renderer.active:
-                renderer.is_gpu = is_gpu
-                renderer.active = True
+            render_widget = self.__render_widgets[idx]
+            render_widget.set_volume(volume)
+            render_widget.is_gpu = is_gpu
+            render_widget.active = True
+
         else:
             image = vtkImageData()
             image.CopyStructure(self.__template_image)
             render_widget = SynchronizedRenderWidget(
                 is_gpu, image, volume, idx, self.__label_color_widget.colors, self.__label_color_widget.opacities,
-                shaded=self.__shaded_btn.isChecked(), progressive=self.__progressive_bt.isChecked()
+                shaded=self.__shaded_btn.isChecked(), progressive=self.__progressive_bt.isChecked(),
+                off_screen=self.is_interchangeable
             )
 
             render_widget.active = True
@@ -100,9 +104,15 @@ class PreservingDataView(DataView):
 
         self._layout_renderers()
 
+        if self.is_interchangeable:
+            self._interchangeableView.add(self.__render_widgets[idx])
+
     def remove_volume(self, idx: int):
         if idx in self.__render_widgets:
             renderer = self.__render_widgets[idx]
+            if self.is_interchangeable:
+                self._interchangeableView.remove(self.__render_widgets[idx])
+
             renderer.active = False
         else:
             print('Error: no volume {} that could be removed.'.format(idx))
@@ -126,26 +136,40 @@ class PreservingDataView(DataView):
             renderer.progressive = value
 
     def _set_interchangeable(self, value: bool):
-        if self.__is_interchangeable != value:
-            self.__is_interchangeable = value
-            self._layout_renderers()
+        if self.is_interchangeable != value:
+            if value:
+                for renderer in self.__render_widgets.values():
+                    renderer.off_screen = True
+                self._interchangeableView = InterchangeableView(self.__grid_container)
+                self._layout_renderers()
+                for renderer in (r for r in self.__render_widgets.values() if r.active):
+                    self._interchangeableView.add(renderer)
+            else:
+                for renderer in (r for r in self.__render_widgets.values() if r.active):
+                    self._interchangeableView.remove(renderer)
+
+                for renderer in self.__render_widgets.values():
+                    renderer.off_screen = False
+
+                x = self._interchangeableView.finalize()
+                self._interchangeableView = None
+                self._layout_renderers()
 
     def _layout_renderers(self):
         for renderer in self.__render_widgets.values():
             renderer.setParent(None)
 
-        if self.__grid_container.layout() is not None:
-            # reparent layout and child widgets to temporary which will be deleted the proper way
-            QWidget().setLayout(self.__grid_container.layout())
-            self.__grid_container.setLayout(None)
-
-        assert len(self.__grid_container.children()) == 0
-        if self.__is_interchangeable:
+        if self.is_interchangeable:
+            rect = self.__grid_container.contentsRect()
             for renderer in (t for t in self.__render_widgets.values() if t.active):
+                renderer.setGeometry(rect)
                 renderer.setParent(self.__grid_container)
-                renderer.setGeometry(self.__grid_container.contentsRect())
-                renderer.show()
         else:
+            if self.__grid_container.layout() is not None:
+                # reparent layout and child widgets to temporary which will be deleted the proper way
+                QWidget().setLayout(self.__grid_container.layout())
+                self.__grid_container.setLayout(None)
+
             self.__grid_container.setLayout(layout := QGridLayout())
             layout.setSpacing(0)
             layout.setContentsMargins(0, 0, 0, 0)
@@ -154,11 +178,6 @@ class PreservingDataView(DataView):
             for i, renderer in enumerate(t for t in self.__render_widgets.values() if t.active):
                 row = i // layout_side_size
                 layout.addWidget(renderer, row, i - layout_side_size * row)
-
-    def resizeEvent(self, event: QResizeEvent):
-        if self.__is_interchangeable:
-            for renderer in (t for t in self.__render_widgets.values() if t.active):
-                renderer.setGeometry(self.__grid_container.contentsRect())
 
     def closeEvent(self, event):
         for renderer in self.__render_widgets.values():

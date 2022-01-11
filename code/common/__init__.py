@@ -9,6 +9,7 @@ from vtkmodules.vtkInteractionStyle import vtkInteractorStyleJoystickActor, vtkI
 from .DataView import DataView
 from .Delegate import Delegate
 from .LabelColorWidget import *
+from .InputForwardingRenderWindowInteractor import InputForwardingRenderWindowInteractor
 
 clamp = (lambda x, a, b: min(max(x, a), b))
 

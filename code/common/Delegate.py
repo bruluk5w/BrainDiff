@@ -18,11 +18,12 @@ class Delegate(list):
 
     def __isub__(self, f):
         if callable(f):
-            self.remove(f)
+            if f in self:
+                self.remove(f)
         else:
             assert isinstance(f, list)
             assert all(callable(x) for x in f)
-            for x in f:
-                self.remove(f)
+            for x in (x for x in f if x in self):
+                self.remove(x)
 
         return self

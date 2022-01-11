@@ -1,8 +1,8 @@
 from PySide6.QtCore import Qt
-from vtkmodules.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from vtkmodules.vtkRenderingCore import vtkRenderWindow
 from vtkmodules.vtkRenderingUI import vtkGenericRenderWindowInteractor
 
+from FixedQVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from common import Delegate, InteractorStyle, get_interactor_style, set_interactor_style
 
 
@@ -13,23 +13,23 @@ class HookedInteractor(vtkGenericRenderWindowInteractor):
         if src is not self:
             super().Render()
             if src is None:
-                self.on_change(self)
+                HookedInteractor.on_change(self)
 
     def TimerEvent(self):
         super().TimerEvent()
-        self.on_change(self)
+        HookedInteractor.on_change(self)
 
     def MouseMoveEvent(self):
         super().MouseMoveEvent()
-        self.on_change(self)
+        HookedInteractor.on_change(self)
 
     def MouseWheelForwardEvent(self):
         super().MouseWheelForwardEvent()
-        self.on_change(self)
+        HookedInteractor.on_change(self)
 
     def MouseWheelBackwardEvent(self):
         super().MouseWheelBackwardEvent()
-        self.on_change(self)
+        HookedInteractor.on_change(self)
 
 
 class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
@@ -38,14 +38,16 @@ class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
     current_interactor_style: InteractorStyle = InteractorStyle.JOYSTICK_CAMERA
 
     def __init__(self, *k, **kw):
-        assert 'iren' not in kw and 'rw' not in kw
-        kw['iren'] = interactor = HookedInteractor()
-        kw['rw'] = rw = vtkRenderWindow()
-        interactor.SetRenderWindow(rw)
+        if (rw := kw.get('rw', None)) is None:
+            kw['rw'] = rw = vtkRenderWindow()
+
+        if (interactor := kw.get('iren', None)) is None:
+            kw['iren'] = interactor = HookedInteractor()
+            interactor.SetRenderWindow(rw)
 
         super().__init__(*k, **kw)
         self.setAttribute(Qt.WA_DeleteOnClose)
-        interactor.on_change += self.on_change
+        HookedInteractor.on_change += self.on_change
         self.on_key_press_event += self.keyPressEvent
         self.on_key_release_event += self.keyReleaseEvent
         set_interactor_style(self._Iren.GetInteractorStyle(),
@@ -53,7 +55,11 @@ class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
 
     @property
     def interactor_style(self) -> InteractorStyle:
-        return get_interactor_style(self._Iren.GetInteractorStyle())
+        return get_interactor_style(self.interactor.GetInteractorStyle())
+
+    @property
+    def interactor(self) -> HookedInteractor:
+        return self._Iren
 
     def on_change(self, src):
         if src is not self._Iren:
@@ -73,11 +79,16 @@ class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
                 self.on_key_release_event(ev, self)
 
     def Finalize(self):
-        self._Iren.on_change -= self.on_change
+        super().Finalize()
+        self._Iren.RemoveAllObservers()
+        HookedInteractor.on_change -= self.on_change
         self.on_key_press_event -= self.keyPressEvent
         self.on_key_release_event -= self.keyReleaseEvent
-        super().Finalize()
+        self._Iren.GetRenderWindow().SetInteractor(None)
         self._Iren.SetRenderWindow(None)
-        self.GetRenderWindow().SetInteractor(None)
         self._Iren = None
         self._RenderWindow = None
+        self._RenderWindow = None
+
+    def __del__(self):
+        print("deleted synced qvtk widget")
