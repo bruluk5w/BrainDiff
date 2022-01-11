@@ -34,8 +34,8 @@ class DataLoader(QThread):
 
         for idx, file in enumerate(self.__dataFiles):
             reader.SetFileName(self.__data_path + file)
-            image = reader.GetOutputDataObject(0)  # type: vtkImageData
             reader.Update()
+            image = reader.GetOutputDataObject(0)  # type: vtkImageData
             ext = image.GetExtent()
             dim = (ext[1] - ext[0] + 1, ext[3] - ext[2] + 1, ext[5] - ext[4] + 1)
             self.__npDataList.append(vtk_to_numpy(image.GetPointData().GetScalars()).reshape(dim))

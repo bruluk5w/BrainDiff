@@ -1,7 +1,8 @@
 from typing import Dict, Callable, Optional
 
 import numpy as np
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy, \
     QSlider, QComboBox
 from vtkmodules.vtkCommonDataModel import vtkImageData, vtkColor3ub
@@ -38,7 +39,8 @@ class PreservingDataView(DataView):
         splitter.addWidget(self.__label_color_widget)
 
         self.__grid_container = QWidget()
-        self.__grid_container.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.__grid_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.__grid_container.adjustSize()
         splitter.addWidget(self.__grid_container)
 
         self._camera_reset = False
@@ -219,6 +221,16 @@ class PreservingDataView(DataView):
             for i, renderer in enumerate(t for t in self.__render_widgets.values() if t.active):
                 row = i // layout_side_size
                 layout.addWidget(renderer, row, i - layout_side_size * row)
+                renderer.show()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        if self.is_interchangeable:
+            rect = self.__grid_container.contentsRect()
+            for renderer in (t for t in self.__render_widgets.values() if t.active):
+                renderer.setParent(None)
+                renderer.show()
+                renderer.setGeometry(rect)
+                renderer.setParent(self.__grid_container)
 
     def closeEvent(self, event):
         for renderer in self.__render_widgets.values():

@@ -259,7 +259,7 @@ class SynchronizedRenderWidget(QWidget):
             assert self.active
 
         self.renderWindowWidget.GetRenderWindow().SetOffScreenRendering(value)
-
+        self.setAttribute(Qt.WA_DontShowOnScreen, value)
         if value:
             self.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
             f = self.__window_to_image_filter = vtkWindowToImageFilter()
