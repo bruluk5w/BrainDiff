@@ -1,4 +1,6 @@
-from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QCheckBox, QSizePolicy
+from PySide6.QtCore import QSize
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QCheckBox, QSizePolicy, QStyle
 
 
 class VolumeListItem(QWidget):
@@ -7,17 +9,12 @@ class VolumeListItem(QWidget):
         self.__volume_idx = volume_idx
         self.__horizontal_layout = QHBoxLayout()
         self.__label = QLabel()
-        self.__check_box = QCheckBox()
-        self.__check_box.stateChanged.connect(lambda: self.clickCheckbox())
-        self.__horizontal_layout.addWidget(self.__check_box)
+        self.__icon_label = QLabel()
+        self.__horizontal_layout.addWidget(self.__icon_label)
         self.__horizontal_layout.addWidget(self.__label)
         self.setLayout(self.__horizontal_layout)
-        self.__selected = False
+        self.selected = False
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Minimum)
-
-    def clickCheckbox(self):
-        # TODO: This would work if it was set in VolumeListWidget
-        self.__selected = not self.__selected
 
     @property
     def idx(self):
@@ -33,4 +30,5 @@ class VolumeListItem(QWidget):
     @selected.setter
     def selected(self, value: bool):
         self.__selected = value
-        self.__check_box.setChecked(value)
+        icon = self.style().standardIcon(QStyle.SP_DialogApplyButton if self.selected else QStyle.SP_DialogCancelButton)
+        self.__icon_label.setPixmap(icon.pixmap(QSize(10, 10)))

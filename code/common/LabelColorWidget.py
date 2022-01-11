@@ -1,11 +1,13 @@
+from functools import partial
 from typing import NamedTuple, List, Sequence
 
-from PySide6.QtGui import QPalette, Qt, QColor
+from PySide6.QtGui import Qt, QColor
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSlider, QPushButton, QSizePolicy, QColorDialog
 from vtkmodules.vtkCommonDataModel import vtkColor3ub
 
-from common import Delegate
-from functools import partial
+from .Delegate import Delegate
+
+clamp = (lambda x, a, b: min(max(x, a), b))
 
 
 def seq_to_qt_color(col: Sequence[int]) -> QColor:
@@ -50,6 +52,7 @@ class LabelColorWidget(QWidget):
         self.layout().setSpacing(0)
 
         self.__color_buttons = []
+        self.__sliders = []
         for i, label_setting in enumerate(self.__label_settings):
             self.__label_colors.append(label_setting.default_color)
 
@@ -83,6 +86,7 @@ class LabelColorWidget(QWidget):
             slider.setMaximum(255)
             slider.setValue(0)
             slider.valueChanged.connect(partial(self.__handle_opacity_changed, i))
+            self.__sliders.append(slider)
 
     @property
     def opacities(self):
@@ -108,6 +112,11 @@ class LabelColorWidget(QWidget):
     def color_changed(self, value):
         assert value is self.__on_color_changed
 
+    def set_opacity(self, idx, value):
+        assert idx < len(self.__sliders)
+        s = self.__sliders[idx]
+        s.setValue(clamp(value, s.minimum(), s.maximum()))
+
     def __handle_opacity_changed(self, idx, value):
         self.__label_opacities[idx] = value
         self.opacity_changed(idx, value)
@@ -117,7 +126,7 @@ class LabelColorWidget(QWidget):
         set_widget_bg_color(self.__color_buttons[idx], color)
         self.color_changed(idx, color)
 
-    def __handle_color_button_pressed(self, idx:int):
+    def __handle_color_button_pressed(self, idx: int):
         color_picker = QColorDialog(
             seq_to_qt_color(self.__label_colors[idx]),
             parent=self
@@ -126,4 +135,3 @@ class LabelColorWidget(QWidget):
         color_picker.setOption(QColorDialog.ShowAlphaChannel, False)
         color_picker.currentColorChanged.connect(partial(self.__handle_color_changed, idx))
         color_picker.show()
-

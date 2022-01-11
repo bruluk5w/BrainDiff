@@ -1,5 +1,6 @@
 from typing import Callable
 
+from PySide6.QtWidgets import QLabel
 from common import Delegate
 from .EditableIntervalSlider import EditableIntervalSlider
 from .Popup import Popup
@@ -35,10 +36,16 @@ class SetGpuMemLimitUI(Popup):
     def __init__(self, settings: Settings, cb: Callable[[], None] = None):
         super().__init__(cb, "Set GPU Memory Limit")
         self.__settings = settings
-        self.__slider = EditableIntervalSlider(minimum=0, maximum=8192, unit='MB')
-        self.layout().addWidget(self.__slider)
-        self.__slider.set_value(self.__settings.gpu_mem_limit)
-        self.__slider.value_changed.connect(self.set_value)
+        self.layout().addWidget(label := QLabel())
+        label.setWordWrap(True)
+        label.setText('This sets the amount of raw volume data that the application may load to GPU memory. Above this '
+                      'limit slower CPU renderers will be used. Note that this limit does not incldue any additional '
+                      'framebufferes or other resources. For example, the application may consume significantly more '
+                      'GPU memory when run fullscreen on a 4k monitor. Overallocation my lead to the application being '
+                      'terminated.')
+        self.layout().addWidget(slider := EditableIntervalSlider(minimum=0, maximum=8192, unit='MB'))
+        slider.set_value(self.__settings.gpu_mem_limit)
+        slider.value_changed.connect(self.set_value)
         self.show()
 
     def set_value(self, v):

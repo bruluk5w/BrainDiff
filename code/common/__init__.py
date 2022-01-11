@@ -11,8 +11,6 @@ from .Delegate import Delegate
 from .LabelColorWidget import *
 from .InputForwardingRenderWindowInteractor import InputForwardingRenderWindowInteractor
 
-clamp = (lambda x, a, b: min(max(x, a), b))
-
 __app: Optional[QApplication] = None
 
 

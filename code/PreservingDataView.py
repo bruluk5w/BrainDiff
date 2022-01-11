@@ -33,7 +33,8 @@ class PreservingDataView(DataView):
         splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         splitter.setChildrenCollapsible(False)
         self.__label_color_widget = BrainWebLabelColorWidget()
-        self.__label_color_widget.opacities[1] = 50  # let's not confront the user at first with a black screen
+        self.__label_color_widget.set_opacity(2, 25)  # let's not confront the user at first with a black screen
+        self.__label_color_widget.set_opacity(8, 50)
         self.__label_color_widget.opacity_changed += self._update_iso_opacities
         self.__label_color_widget.color_changed += self._update_iso_colors
         splitter.addWidget(self.__label_color_widget)
