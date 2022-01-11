@@ -19,7 +19,7 @@ from common import clamp
 def convert(numpy_array):
     # If Deep is set to True, the array is deep-copied from numpy. This is not as efficient as the default
     # behavior and uses more memory but detaches the two array such that the numpy array can be released.
-    return numpy_to_vtk(numpy_array.ravel(), deep=True, array_type=vtk.VTK_FLOAT)
+    return numpy_to_vtk(numpy_array.ravel(), deep=True, array_type=vtk.VTK_UNSIGNED_CHAR)
 
 
 def _make_opacity_value(x):

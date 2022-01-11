@@ -4,6 +4,7 @@ from vtkmodules.util.numpy_support import vtk_to_numpy
 from PySide6.QtCore import QThread, Signal
 from vtkmodules.vtkCommonDataModel import vtkImageData
 from vtkmodules.vtkIOMINC import vtkMINCImageReader
+from vtkmodules.vtkImagingCore import vtkImageCast
 
 
 class DataLoader(QThread):
@@ -31,11 +32,14 @@ class DataLoader(QThread):
 
     def run(self):
         reader = vtkMINCImageReader()
-
+        image_cast = vtkImageCast()
+        image_cast.SetInputConnection(0, reader.GetOutputPort())
+        image_cast.SetOutputScalarTypeToUnsignedChar()
         for idx, file in enumerate(self.__dataFiles):
             reader.SetFileName(self.__data_path + file)
             reader.Update()
-            image = reader.GetOutputDataObject(0)  # type: vtkImageData
+            image_cast.Update()
+            image = image_cast.GetOutputDataObject(0)  # type: vtkImageData
             ext = image.GetExtent()
             dim = (ext[1] - ext[0] + 1, ext[3] - ext[2] + 1, ext[5] - ext[4] + 1)
             self.__npDataList.append(vtk_to_numpy(image.GetPointData().GetScalars()).reshape(dim))
