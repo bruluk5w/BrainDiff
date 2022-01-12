@@ -10,7 +10,7 @@ from .DataView import DataView
 from .Delegate import Delegate
 from .InputForwardingRenderWindowInteractor import InputForwardingRenderWindowInteractor
 from .LabelColorWidget import *
-
+from .FloatSlider import FloatSlider
 __app: Optional[QApplication] = None
 
 

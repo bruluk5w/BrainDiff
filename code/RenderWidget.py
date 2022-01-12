@@ -2,7 +2,7 @@ from typing import List, Union, Set
 
 import numpy as np
 import vtk
-from PySide6.QtGui import QColor, Qt, QResizeEvent
+from PySide6.QtGui import QColor, Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonColor import vtkNamedColors
@@ -83,8 +83,10 @@ class SynchronizedRenderWidget(QWidget):
         self.ren = vtkRenderer()
         self.ren.SetActiveCamera(self.camera)
         light = vtkLight()
-        light.SetColor(1, 1, 1)
+        light.SetColor(0.5, 0.5, 0.5)
+        light.SetLightTypeToCameraLight()
         self.ren.AddLight(light)
+        self.ren.SetAmbient(0.1, 0.1, 0.1)
         # Create transfer mapping scalar value to color according to color list and iso 0-11
         self.colorTransferFunction = vtkColorTransferFunction()
         init_color_transfer_function(self.colorTransferFunction, color_list)
@@ -279,10 +281,6 @@ class SynchronizedRenderWidget(QWidget):
     def _update_offscreen_rendering(self, event_src):
         self.__window_to_image_filter.Modified()
         self.__window_to_image_filter.Update(0)
-
-    def resizeEvent(self, event: QResizeEvent):
-        super().resizeEvent(event)
-        print('SyncedRenderWidget resized to {}'.format(event.size()))
 
     @property
     def mem_size(self) -> float:

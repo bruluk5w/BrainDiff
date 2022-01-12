@@ -1,16 +1,16 @@
 from typing import Dict, Callable, Optional
 
 import numpy as np
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy, \
-    QSlider, QComboBox
+    QComboBox
 from vtkmodules.vtkCommonDataModel import vtkImageData, vtkColor3ub
 
 from BrainWebLabelColorWidget import BrainWebLabelColorWidget
 from InterchangeableViewHelper import InterchangeableView, SmoothType
 from RenderWidget import SynchronizedRenderWidget
-from common import DataView, combo_box_add_enum_items
+from common import DataView, combo_box_add_enum_items, FloatSlider
 
 
 class PreservingDataView(DataView):
@@ -49,7 +49,7 @@ class PreservingDataView(DataView):
         def new_layout():
             parent_layout.addWidget(container := QWidget())
             container.setLayout(layout := QHBoxLayout())
-            container.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+            container.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
             return layout, container
 
         layout, _ = new_layout()
@@ -72,10 +72,8 @@ class PreservingDataView(DataView):
         self.__interchangeable_btn = button('Interchangeable', self._set_interchangeable)
 
         layout, self._interchangeable_settings_container = new_layout()
-        self.__interchangeable_slider = slider = QSlider(orientation=Qt.Horizontal)
-        slider.setMinimum(0)
-        slider.setMaximum(0)
-        slider.valueChanged.connect(self._set_page)
+        self.__interchangeable_slider = slider = FloatSlider(value=0, minimum=0, maximum=0)
+        slider.value_changed += self._set_page
         layout.addWidget(slider)
         self.__interchangeable_smooth_type = box = QComboBox()
         combo_box_add_enum_items(box, SmoothType)
@@ -142,14 +140,14 @@ class PreservingDataView(DataView):
 
         if self.is_interchangeable:
             self._interchangeableView.add(self.__render_widgets[idx])
-            self.__interchangeable_slider.setMaximum(self._interchangeableView.count)
+            self.__interchangeable_slider.set_interval(0, max(0, self._interchangeableView.count - 1))
 
     def remove_volume(self, idx: int):
         if idx in self.__render_widgets:
             renderer = self.__render_widgets[idx]
             if self.is_interchangeable:
                 self._interchangeableView.remove(self.__render_widgets[idx])
-                self.__interchangeable_slider.setMaximum(self._interchangeableView.count)
+                self.__interchangeable_slider.set_interval(0, max(0, self._interchangeableView.count - 1))
 
             renderer.active = False
         else:
@@ -183,7 +181,8 @@ class PreservingDataView(DataView):
                 for renderer in (r for r in self.__render_widgets.values() if r.active):
                     self._interchangeableView.add(renderer)
 
-                self.__interchangeable_slider.setMaximum(self._interchangeableView.count)
+                self.__interchangeable_slider.set_interval(0, max(0, self._interchangeableView.count - 1))
+                self._interchangeableView.set_page(self.__interchangeable_slider.value)
                 self._interchangeable_settings_container.show()
             else:
                 for renderer in (r for r in self.__render_widgets.values() if r.active):

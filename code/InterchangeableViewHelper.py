@@ -89,8 +89,7 @@ class InterchangeableView:
         for i, o in enumerate(opacities):
             self._image_blend.SetOpacity(i, o)
 
-    def _get_opacity(self, v):
-        pass
+        self._update()
 
     def add(self, renderer: SynchronizedRenderWidget):
         assert renderer not in self.added_renderers
@@ -105,6 +104,8 @@ class InterchangeableView:
 
         if self.linked_renderer is None:
             self._link(renderer)
+
+        self._update()
 
     def remove(self, renderer: SynchronizedRenderWidget):
         if renderer not in self.added_renderers:
@@ -122,6 +123,8 @@ class InterchangeableView:
 
         if self.linked_renderer is None and self.added_renderers:
             self._link(next(iter(self.added_renderers)))
+
+        self._update()
 
     def _link(self, renderer):
         """
@@ -169,6 +172,10 @@ class InterchangeableView:
         self.interactor = None
         self.graphics_target_window = None
         self.linked_renderer = None
+
+    def _update(self):
+        if self.composite_image_widget is not None:
+            self.composite_image_widget.update()
 
     def set_geometry(self, rect):
         self.composite_image_widget.setGeometry(rect)
