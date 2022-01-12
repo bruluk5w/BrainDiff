@@ -48,7 +48,7 @@ class FloatSlider(QWidget):
         self._value_changed(v)
 
     def set_value(self, value):
-        clamp(value, self._min, self._max)
+        value = clamp(value, self._min, self._max)
         if self.range == 0:
             v = RANGE_MIN
         else:

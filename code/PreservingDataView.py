@@ -1,10 +1,11 @@
+import time
 from typing import Dict, Callable, Optional
 
 import numpy as np
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QWidget, QSplitter, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QSizePolicy, \
-    QComboBox
+    QComboBox, QDoubleSpinBox, QLabel
 from vtkmodules.vtkCommonDataModel import vtkImageData, vtkColor3ub
 
 from BrainWebLabelColorWidget import BrainWebLabelColorWidget
@@ -79,6 +80,22 @@ class PreservingDataView(DataView):
         combo_box_add_enum_items(box, SmoothType)
         box.currentIndexChanged.connect(self._set_smooth_type)
         layout.addWidget(box)
+        self.__interchangeable_animate_btn = button('Animate', self._set_animating, layout=layout)
+        self.__timer = QTimer()
+        self.__timer.setSingleShot(True)
+        self.__last_update_time = None
+        self.__animate_forward = None
+        self.__animation_speed_ctrl = spinbox = QDoubleSpinBox()
+        spinbox.setKeyboardTracking(False)
+        spinbox.setRange(0.1, 10)
+        spinbox.setValue(1)
+        spinbox.setAccelerated(True)
+        spinbox.setDecimals(1)
+        spinbox.setSingleStep(0.1)
+        layout.addWidget(QLabel('Speed: '))
+        layout.addWidget(spinbox)
+
+        self.__timer.timeout.connect(self._animate_step)
         self._interchangeable_settings_container.hide()
 
     @property
@@ -98,6 +115,29 @@ class PreservingDataView(DataView):
             smooth_type = self.__interchangeable_smooth_type.itemData(idx, Qt.UserRole)
             assert smooth_type == self.smooth_type
             self._interchangeableView.smooth_type = smooth_type
+
+    def _set_animating(self, value):
+        if value:
+            self.__animate_forward = True
+            self.__last_update_time = time.time()
+            self.__timer.start()
+        else:
+            self.__timer.stop()
+
+    def _animate_step(self):
+        t = time.time()
+        dt = t - self.__last_update_time
+        self.__last_update_time = t
+        if not self.__animate_forward:
+            dt = -dt
+
+        new_time = self.__interchangeable_slider.value + dt * self.__animation_speed_ctrl.value()
+        if new_time > self.__interchangeable_slider.range or new_time < 0:
+            self.__animate_forward = not self.__animate_forward
+        else:
+            self.__interchangeable_slider.set_value(new_time)
+
+        self.__timer.start()
 
     def gpu_mem_limit_changed(self, limit: int):
         super().gpu_mem_limit_changed(limit)
