@@ -95,3 +95,6 @@ class InputForwardingRenderWindowInteractor(vtkRenderWindowInteractor):
 
     def TimerEvent(self):
         return self._target_interactor.TimerEvent()
+
+    def GetInteractorStyle(self):
+        return self._target_interactor.GetInteractorStyle()
