@@ -70,7 +70,8 @@ class PreservingDataView(DataView):
         self.__progressive_bt.setToolTip('Turn off if CPU renderers stay blurry. May stall the the application if the '
                                          'load is to heavy for the system. If possible, for best performance increase '
                                          'the GPU memory limit in the settings.')
-        self.__interchangeable_btn = button('Interchangeable', self._set_interchangeable)
+        self.__interchangeable_btn = button('Interchangeable', self._set_interchangeable,
+                                            toggled=self.is_interchangeable)
 
         layout, self._interchangeable_settings_container = new_layout()
         self.__interchangeable_slider = slider = FloatSlider(value=0, minimum=0, maximum=0)
@@ -272,6 +273,13 @@ class PreservingDataView(DataView):
                 renderer.setParent(self.__grid_container)
 
     def closeEvent(self, event):
+        if self.is_interchangeable:
+            for renderer in (r for r in self.__render_widgets.values() if r.active):
+                self._interchangeableView.remove(renderer)
+
+            self._interchangeableView.finalize()
+            self._interchangeableView = None
+
         for renderer in self.__render_widgets.values():
             renderer.close()
 
