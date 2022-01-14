@@ -58,7 +58,7 @@ class BrainWebLabelColorWidget(LabelColorWidget):
             ),
             LabelSetting(
                 label=10,
-                name='Dura Matter',
+                name='Dura Mater',
                 default_color=vtkNamedColors().GetColor3ub("Peacock"),
             ),
             LabelSetting(

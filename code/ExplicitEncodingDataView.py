@@ -45,7 +45,11 @@ class ExplicitEncodingDataView(DataView):
         splitter.addWidget(self.__renderer_widget)
         self.__renderer = vtkRenderer()
         self.__renderer.SetBackground(vtkNamedColors().GetColor3d('Black'))
-        self.__renderer.UseDepthPeelingOn()
+        self.__renderer_widget.GetRenderWindow().SetAlphaBitPlanes(1)
+        self.__renderer_widget.GetRenderWindow().SetMultiSamples(0)
+        self.__renderer.SetUseDepthPeeling(1)
+        self.__renderer.SetMaximumNumberOfPeels(100)
+        self.__renderer.SetOcclusionRatio(0.06)
         self.__renderer_widget.GetRenderWindow().AddRenderer(self.__renderer)
         self.__actors: Dict[int, vtkActor] = {}
         self.__mappers: Dict[int, vtkPolyDataMapper] = {}
