@@ -11,7 +11,7 @@ Implemented techniques were inspired by:
 K. Kim et al., Comparison techniques utilized in spatial 3D and 4D data visualizations: A survey and future
 directions, Computers & Graphics (2017), http://dx.doi.org/10.1016/j.cag.2017.05.005
 
-Visualizations were generated using 20 models from the [brainweb](http://www.bic.mni.mcgill.ca/brainweb/) data set from: 
+Visualizations were generated using the 20 discrete models from the [brainweb](http://www.bic.mni.mcgill.ca/brainweb/) data set from: 
 https://brainweb.bic.mni.mcgill.ca/brainweb/anatomic_normal_20.html
 
 BrainWeb Sources.
