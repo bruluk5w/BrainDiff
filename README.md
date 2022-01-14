@@ -14,8 +14,8 @@ directions, Computers & Graphics (2017), http://dx.doi.org/10.1016/j.cag.2017.05
 Visualizations were generated using 20 models from the [brainweb](http://www.bic.mni.mcgill.ca/brainweb/) data set from: 
 https://brainweb.bic.mni.mcgill.ca/brainweb/anatomic_normal_20.html
 
-##BrainWeb Sources.
-
+BrainWeb Sources.
+-----------------
 C.A. Cocosco, V. Kollokian, R.K.-S. Kwan, A.C. Evans : "BrainWeb: Online Interface to a 3D MRI Simulated Brain 
 Database". NeuroImage, vol.5, no.4, part 2/4, S425, 1997 -- Proceedings of 3-rd International Conference on Functional 
 Mapping of the Human Brain, Copenhagen, May 1997.
