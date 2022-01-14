@@ -80,15 +80,9 @@ class SynchronizedQVTKRenderWindowInteractor(QVTKRenderWindowInteractor):
 
     def Finalize(self):
         super().Finalize()
-        self._Iren.RemoveAllObservers()
         HookedInteractor.on_change -= self.on_change
         self.on_key_press_event -= self.keyPressEvent
         self.on_key_release_event -= self.keyReleaseEvent
-        self._Iren.GetRenderWindow().SetInteractor(None)
-        self._Iren.SetRenderWindow(None)
-        self._Iren = None
-        self._RenderWindow = None
-        self._RenderWindow = None
 
     def __del__(self):
         print("deleted synced qvtk widget")

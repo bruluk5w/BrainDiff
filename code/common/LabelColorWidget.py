@@ -1,8 +1,8 @@
 from functools import partial
-from typing import NamedTuple, List, Sequence
+from typing import NamedTuple, List, Sequence, Callable
 
 from PySide6.QtGui import Qt, QColor
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSlider, QPushButton, QSizePolicy, QColorDialog
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QSlider, QPushButton, QSizePolicy, QColorDialog, QHBoxLayout
 from vtkmodules.vtkCommonDataModel import vtkColor3ub
 
 from .Delegate import Delegate
@@ -39,7 +39,7 @@ class LabelColorWidget(QWidget):
     Provides editing for colors per each integer label
     """
 
-    def __init__(self, label_settings: List[LabelSetting], parent=None):
+    def __init__(self, label_settings: List[LabelSetting], parent=None, inject_ui: Callable = None):
         super().__init__(parent)
         self.__label_settings = label_settings
         self.__on_opacity_changed = Delegate()
@@ -55,8 +55,16 @@ class LabelColorWidget(QWidget):
         self.__sliders = []
         for i, label_setting in enumerate(self.__label_settings):
             self.__label_colors.append(label_setting.default_color)
+            if inject_ui is not None:
+                self.layout().addWidget(container := QWidget())
+                container.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+                container.setLayout(layout := QHBoxLayout())
+                layout.setContentsMargins(0, 0, 0, 0)
+                inject_ui(i, layout)
+            else:
+                layout = self.layout()
 
-            self.layout().addWidget(btn := QPushButton())
+            layout.addWidget(btn := QPushButton())
             btn.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
             set_widget_bg_color(btn, label_setting.default_color)
             btn.setLayout(layout := QVBoxLayout())

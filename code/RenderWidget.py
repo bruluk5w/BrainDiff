@@ -1,10 +1,8 @@
 from typing import List, Union, Set
 
 import numpy as np
-import vtk
 from PySide6.QtGui import QColor, Qt
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
-from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonColor import vtkNamedColors
 from vtkmodules.vtkCommonDataModel import vtkImageData, vtkPiecewiseFunction, vtkColor3ub
 from vtkmodules.vtkCommonExecutionModel import vtkAlgorithmOutput
@@ -13,28 +11,14 @@ from vtkmodules.vtkRenderingCore import vtkRenderer, vtkColorTransferFunction, v
 from vtkmodules.vtkRenderingVolumeOpenGL2 import vtkSmartVolumeMapper
 
 from SynchronizedQVTKRenderWindowInteractor import SynchronizedQVTKRenderWindowInteractor, HookedInteractor
-from common import clamp
-
-
-def convert(numpy_array):
-    # If Deep is set to True, the array is deep-copied from numpy. This is not as efficient as the default
-    # behavior and uses more memory but detaches the two array such that the numpy array can be released.
-    return numpy_to_vtk(numpy_array.ravel(), deep=True, array_type=vtk.VTK_UNSIGNED_CHAR)
-
-
-def _make_opacity_value(x):
-    return x / 255
-
-
-def _make_color_value(c: vtkColor3ub):
-    return [c[0] / 255, c[1] / 255, c[2] / 255]
+from common import clamp, convert, make_opacity_value, make_color_value
 
 
 def init_color_transfer_function(func: vtkColorTransferFunction, values: List[vtkColor3ub]):
     func.AllowDuplicateScalarsOn()
     max_x = len(values)
     for idx, value in enumerate(values):
-        v = [value[i] / 255 for i in range(3)]
+        v = make_color_value(value)
         func.AddRGBPoint(clamp(idx - 0.5, 0, max_x), *v)
         func.AddRGBPoint(clamp(idx + 0.5, 0, max_x), *v)
 
@@ -43,7 +27,7 @@ def init_opacity_transfer_function(func: vtkPiecewiseFunction, values: List[floa
     func.AllowDuplicateScalarsOn()
     max_x = len(values)
     for idx, value in enumerate(values):
-        v = _make_opacity_value(value)
+        v = make_opacity_value(value)
         func.AddPoint(clamp(idx - 0.5, 0, max_x), v)
         func.AddPoint(clamp(idx + 0.5, 0, max_x), v)
 
@@ -195,7 +179,7 @@ class SynchronizedRenderWidget(QWidget):
         self.__shaded = value
 
     def update_label_opacity(self, idx: int, label_opacity: float):
-        val = _make_opacity_value(label_opacity)
+        val = make_opacity_value(label_opacity)
         node = [0.0] * 4
         self.opacityTransferFunction.GetNodeValue(idx * 2, node)
         node[1] = val
@@ -207,7 +191,7 @@ class SynchronizedRenderWidget(QWidget):
             self.renderWindowWidget.on_change(None)
 
     def update_label_color(self, idx: int, label_color: vtkColor3ub):
-        val = _make_color_value(label_color)
+        val = make_color_value(label_color)
         node = [0.0] * 6
         self.colorTransferFunction.GetNodeValue(idx * 2, node)
         node[1:4] = val

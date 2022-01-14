@@ -384,6 +384,12 @@ class QVTKRenderWindowInteractor(QVTKRWIBaseClass):
             self._Iren.RemoveObserver(o)
 
         self._RenderWindow.Finalize()
+        self._Iren.RemoveAllObservers()
+        self._Iren.GetRenderWindow().SetInteractor(None)
+        self._Iren.SetRenderWindow(None)
+        self._Iren = None
+        self._RenderWindow = None
+        self._RenderWindow = None
 
     def CreateTimer(self, obj, evt):
         self._Timer.start(10)

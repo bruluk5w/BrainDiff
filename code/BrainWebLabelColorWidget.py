@@ -4,7 +4,7 @@ from common import LabelColorWidget, LabelSetting
 
 
 class BrainWebLabelColorWidget(LabelColorWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, inject_ui=None):
         label_settings = [
             LabelSetting(
                 label=0,
@@ -67,4 +67,4 @@ class BrainWebLabelColorWidget(LabelColorWidget):
                 default_color=vtkNamedColors().GetColor3ub("Salmon")
             )
         ]
-        super().__init__(label_settings, parent)
+        super().__init__(label_settings, parent, inject_ui=inject_ui)

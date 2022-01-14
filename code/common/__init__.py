@@ -1,16 +1,19 @@
 from enum import IntEnum
 from typing import Optional
 
+import vtk
 from PySide6.QtWidgets import QApplication, QComboBox
+from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkInteractionStyle import vtkInteractorStyleJoystickActor, vtkInteractorStyleJoystickCamera, \
     vtkInteractorStyleTrackballActor, vtkInteractorStyleTrackballCamera, vtkInteractorStyleSwitch, \
     vtkInteractorStyleMultiTouchCamera
 
 from .DataView import DataView
 from .Delegate import Delegate
+from .FloatSlider import FloatSlider
 from .InputForwardingRenderWindowInteractor import InputForwardingRenderWindowInteractor
 from .LabelColorWidget import *
-from .FloatSlider import FloatSlider
+
 __app: Optional[QApplication] = None
 
 
@@ -21,6 +24,20 @@ def get_app() -> Optional[QApplication]:
 def set_app(app: QApplication):
     global __app
     __app = app
+
+
+def convert(numpy_array, dtype=vtk.VTK_UNSIGNED_CHAR, deep=True):
+    # If Deep is True, the array is deep-copied from numpy. This is not as efficient as the default
+    # behavior and uses more memory but detaches the two arrays such that the numpy array can be released
+    return numpy_to_vtk(numpy_array.ravel(), deep=deep, array_type=dtype)
+
+
+def make_opacity_value(x):
+    return x / 255
+
+
+def make_color_value(c: vtkColor3ub):
+    return [c[0] / 255, c[1] / 255, c[2] / 255]
 
 
 class InteractorStyle(IntEnum):
