@@ -138,12 +138,12 @@ class ExplicitEncodingDataView(DataView):
 
     def _update_label_opacities(self, idx, value):
         if idx in self.__actors:
-            self.__actors[idx].GetProperty().SetOpacity(value / 255)
+            self.__actors[idx].GetProperty().SetOpacity(make_opacity_value(value))
             self.__renderer.GetRenderWindow().Render()
 
     def _update_label_colors(self, idx, color):
         if idx in self.__actors:
-            self.__actors[idx].GetProperty().SetColor(color)
+            self.__actors[idx].GetProperty().SetColor(make_color_value(color))
             self.__renderer.GetRenderWindow().Render()
 
     def _update(self):

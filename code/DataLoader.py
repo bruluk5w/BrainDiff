@@ -15,7 +15,8 @@ class DataLoader(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.__data_path = "../Data/"
-        self.__dataFiles = [f for f in listdir(self.__data_path) if isfile(join(self.__data_path, f))]
+        self.__dataFiles = [f for f in listdir(self.__data_path)
+                            if isfile(join(self.__data_path, f))and f.endswith('.mnc')]
         self.__npDataList = []
         self.__image = None
 

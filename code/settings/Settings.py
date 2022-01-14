@@ -39,7 +39,7 @@ class SetGpuMemLimitUI(Popup):
         self.layout().addWidget(label := QLabel())
         label.setWordWrap(True)
         label.setText('This sets the amount of raw volume data that the application may load to GPU memory. Above this '
-                      'limit slower CPU renderers will be used. Note that this limit does not incldue any additional '
+                      'limit slower CPU renderers will be used. Note that this limit does not include any additional '
                       'framebufferes or other resources. For example, the application may consume significantly more '
                       'GPU memory when run fullscreen on a 4k monitor. Overallocation my lead to the application being '
                       'terminated.')

@@ -1,6 +1,5 @@
 from PySide6.QtCore import QSize
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QCheckBox, QSizePolicy, QStyle
+from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QSizePolicy, QStyle
 
 
 class VolumeListItem(QWidget):

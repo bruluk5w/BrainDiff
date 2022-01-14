@@ -5,7 +5,6 @@ import numpy as np
 import vtk
 from vtkmodules.vtkCommonDataModel import vtkImageData
 from vtkmodules.vtkFiltersCore import vtkMarchingCubes
-from vtkmodules.vtkFiltersGeneral import vtkDiscreteFlyingEdges3D
 
 from common import convert
 
