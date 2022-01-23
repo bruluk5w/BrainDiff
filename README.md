@@ -2,8 +2,7 @@
 ***
 ![alt text](banner.png?raw=true)
 ***
-Repository for group 4 "Comparative Visualization of Brain Anatomy Variability" in Visualisierung medizinischer Daten an
-der TU Wien.
+Repository for group 4 "Comparative Visualization of Brain Anatomy Variability" in Visualisierung medizinischer Daten at TU Wien.
 
 
 Implemented techniques were inspired by:
